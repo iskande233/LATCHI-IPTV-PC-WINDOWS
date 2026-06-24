@@ -7,3 +7,6 @@ Thumbs.db
 *.log
 .env
 .env.local
+package-lock.json
+*.tmp
+*.bak
