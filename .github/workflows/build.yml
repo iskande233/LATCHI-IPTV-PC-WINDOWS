@@ -8,13 +8,13 @@ on:
       version:
         description: 'رقم الإصدار'
         required: true
-        default: '1.0.0'
+        default: '1.0.1'
 
 jobs:
   build-windows:
     name: 🪟 ويندوز
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: 📥 تحميل الكود
@@ -24,28 +24,57 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: 📦 تثبيت الاعتماديات
-        run: npm ci
+        run: npm install
+        shell: bash
 
       - name: 🏗️ بناء التطبيق
         run: npm run build:win
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: 📤 رفع كمادة خام
+      - name: 🔍 عرض ملفات الـ dist
+        run: |
+          echo "=== dist folder ==="
+          ls -la dist/ || echo "dist not found"
+          ls -la dist/*.exe || echo "no exe found"
+        shell: bash
+
+      - name: 📤 رفع كملف مؤقت (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: LATCHI-IPTV-Windows
-          path: dist/*.exe
+          name: LATCHI-IPTV-Windows-EXE
+          path: |
+            dist/*.exe
+            dist/*.msi
           retention-days: 30
+          if-no-files-found: warn
 
-      - name: 🚀 إنشاء Release
+      - name: 🚀 رفع للـ Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist/*.exe
-          generate_release_notes: true
+          files: |
+            dist/*.exe
+            dist/*.msi
+          name: LATCHI IPTV ${{ github.ref_name }}
+          body: |
+            ## 🎉 LATCHI IPTV للحاسوب - ${{ github.ref_name }}
+
+            ### ⚙️ التثبيت:
+            1. حمّل ملف `LATCHI-IPTV-Setup-*.exe`
+            2. شغّله وثبّته
+            3. التطبيق يشتغل مباشرة بدون كود ✅
+
+            ### ✨ المميزات:
+            - 📡 قنوات حية مباشرة
+            - 🎬 أفلام ومسلسلات
+            - 🎨 واجهة VIP فاخرة
+          draft: false
+          prerelease: false
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
