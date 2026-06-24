@@ -2,19 +2,18 @@ name: 🏗️ بناء LATCHI IPTV لويندوز
 
 on:
   push:
+    branches: [ main ]
     tags: [ 'v*' ]
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'رقم الإصدار'
-        required: true
-        default: '1.0.1'
 
 jobs:
   build-windows:
     name: 🪟 ويندوز
     runs-on: windows-latest
     timeout-minutes: 45
+
+    permissions:
+      contents: write
 
     steps:
       - name: 📥 تحميل الكود
@@ -33,48 +32,31 @@ jobs:
         run: npm run build:win
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: 🔍 عرض ملفات الـ dist
-        run: |
-          echo "=== dist folder ==="
-          ls -la dist/ || echo "dist not found"
-          ls -la dist/*.exe || echo "no exe found"
+        run: ls -la dist/
         shell: bash
 
-      - name: 📤 رفع كملف مؤقت (Artifact)
+      - name: 📤 رفع الـ EXE كـ Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LATCHI-IPTV-Windows-EXE
-          path: |
-            dist/*.exe
-            dist/*.msi
-          retention-days: 30
-          if-no-files-found: warn
+          name: LATCHI-IPTV-Windows-Setup
+          path: dist/*.exe
+          retention-days: 90
+          if-no-files-found: error
 
-      - name: 🚀 رفع للـ Release
-        uses: softprops/action-gh-release@v1
+      - name: 🚀 رفع للـ Release (عند tag فقط)
         if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/*.exe
-            dist/*.msi
+          files: dist/*.exe
           name: LATCHI IPTV ${{ github.ref_name }}
           body: |
-            ## 🎉 LATCHI IPTV للحاسوب - ${{ github.ref_name }}
+            ## 🎉 LATCHI IPTV للحاسوب
 
-            ### ⚙️ التثبيت:
+            ### ⚙️ طريقة التثبيت:
             1. حمّل ملف `LATCHI-IPTV-Setup-*.exe`
-            2. شغّله وثبّته
-            3. التطبيق يشتغل مباشرة بدون كود ✅
-
-            ### ✨ المميزات:
-            - 📡 قنوات حية مباشرة
-            - 🎬 أفلام ومسلسلات
-            - 🎨 واجهة VIP فاخرة
-          draft: false
-          prerelease: false
-          generate_release_notes: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            2. شغّله واتبع خطوات التثبيت
+            3. افتح التطبيق — يشتغل مباشرة ✅
+          token: ${{ secrets.GITHUB_TOKEN }}
