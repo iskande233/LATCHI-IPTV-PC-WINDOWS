@@ -60,32 +60,60 @@ function setupNav() {
 async function syncFromScript() {
   setStatus('⏳ جاري الاتصال بالسيرفر...');
   try {
-    const ts  = Date.now();
-    const res = await fetch(`${SCRIPT_URL}?action=get_live_master_state&_t=${ts}`);
+    const ts   = Date.now();
+    // نجيب حالة السيرفر
+    const res  = await fetch(`${SCRIPT_URL}?action=get_live_master_state&_t=${ts}`);
     const data = await res.json();
 
     if (!data.success) { setStatus('❌ فشل الاتصال'); return; }
 
     const newRev = data.server_revision || 0;
-    const newUrl = data.default_playlist_url || data.playlist_url || '';
 
-    // إذا تغيّر الـ revision → حدّث الرابط
-    if (newRev !== lastRevision || newUrl !== masterUrl) {
+    // تحديث Revision في الواجهة
+    const revEl = document.getElementById('stat-rev');
+    if (revEl) revEl.textContent = newRev;
+
+    // إذا تغيّر الـ revision أو ما عندنا رابط → نجيب الرابط
+    if (newRev !== lastRevision || !masterUrl) {
+      log(`🔄 Revision جديد: ${newRev} — جاري جلب الرابط الموحد...`);
+
+      // نجيب الرابط الموحد من Config مباشرة
+      const configRes  = await fetch(`${SCRIPT_URL}?action=get_master_config&_t=${Date.now()}`);
+      const configData = await configRes.json();
+
+      let newUrl = '';
+      if (configData.success && configData.playlist_url) {
+        newUrl = configData.playlist_url;
+      } else {
+        // fallback: نجرب نقرأه من الرابط المحفوظ محلياً
+        newUrl = masterUrl;
+      }
+
+      if (newUrl && newUrl !== masterUrl) {
+        masterUrl = newUrl;
+        localStorage.setItem('masterUrl', masterUrl);
+        log(`✅ رابط جديد: ${masterUrl.slice(0, 60)}...`);
+      }
+
       lastRevision = newRev;
-      if (newUrl) masterUrl = newUrl;
       localStorage.setItem('lastRevision', lastRevision);
-      localStorage.setItem('masterUrl', masterUrl);
-      log(`🔄 Revision: ${newRev} — جاري تحديث القنوات`);
-      await loadChannels();
+
+      // نحمل القنوات
+      if (masterUrl) await loadChannels();
+      else setStatus('⚠️ لم يُعيَّن رابط بعد — أضفه من الإعدادات');
+
     } else {
-      // نفس الـ revision — إذا القنوات فارغة نحملها
-      if (allChannels.length === 0 && masterUrl) await loadChannels();
-      else setStatus(`✅ متصل — ${allChannels.length} قناة`);
+      // نفس الـ revision
+      if (allChannels.length === 0 && masterUrl) {
+        await loadChannels();
+      } else {
+        setStatus(`✅ متصل — ${allChannels.length} قناة — Revision: ${newRev}`);
+      }
     }
   } catch (e) {
     setStatus('❌ لا يوجد اتصال بالإنترنت');
     log('❌ ' + e.message);
-    // نحاول نحمل من الكاش
+    // نحمل من الكاش
     const cached = localStorage.getItem('cachedChannels');
     if (cached && allChannels.length === 0) {
       allChannels = JSON.parse(cached);
