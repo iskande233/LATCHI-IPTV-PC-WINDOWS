@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src *; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; media-src * blob:; img-src * data: blob:; font-src * data:; connect-src *;">
+  <title>LATCHI IPTV</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- ===== TitleBar ===== -->
+    <div id="titlebar">
+      <div id="titlebar-drag">
+        <div id="app-logo">
+          <span class="logo-icon">📺</span>
+          <span class="logo-text">LATCHI <small>IPTV</small></span>
+        </div>
+      </div>
+      <div id="titlebar-controls">
+        <button class="tb-btn" id="btn-minimize">─</button>
+        <button class="tb-btn" id="btn-maximize">□</button>
+        <button class="tb-btn tb-close" id="btn-close">✕</button>
+      </div>
+    </div>
+
+    <!-- ===== Sidebar ===== -->
+    <div id="sidebar">
+      <div id="sidebar-menu">
+        <button class="nav-btn active" data-section="home"><span class="nav-icon">🏠</span><span class="nav-label">الرئيسية</span></button>
+        <button class="nav-btn" data-section="channels"><span class="nav-icon">📡</span><span class="nav-label">القنوات</span></button>
+        <button class="nav-btn" data-section="movies"><span class="nav-icon">🎬</span><span class="nav-label">الأفلام</span></button>
+        <button class="nav-btn" data-section="series"><span class="nav-icon">📺</span><span class="nav-label">المسلسلات</span></button>
+        <button class="nav-btn" data-section="settings"><span class="nav-icon">⚙️</span><span class="nav-label">الإعدادات</span></button>
+      </div>
+      <div id="sidebar-footer">
+        <div id="connection-status" class="status-disconnected">
+          <span class="status-dot"></span><span>جاري الاتصال...</span>
+        </div>
+        <div id="app-version">v1.0.0</div>
+      </div>
+    </div>
+
+    <!-- ===== Main Content ===== -->
+    <div id="main-content">
+      <!-- HOME -->
+      <div id="section-home" class="section active">
+        <div class="hero-area">
+          <div class="hero-glow"></div>
+          <h1 class="hero-title">مرحباً بك في <span class="gold-text">LATCHI IPTV</span></h1>
+          <p class="hero-sub">جميع القنوات والأفلام والمسلسلات في مكان واحد</p>
+        </div>
+        <div id="home-cards" class="home-grid">
+          <div class="home-card" data-section="channels">
+            <div class="card-icon">📡</div><div class="card-title">القنوات الحية</div>
+            <div class="card-count" id="count-channels">0</div>
+          </div>
+          <div class="home-card" data-section="movies">
+            <div class="card-icon">🎬</div><div class="card-title">الأفلام</div>
+            <div class="card-count" id="count-movies">0</div>
+          </div>
+          <div class="home-card" data-section="series">
+            <div class="card-icon">📺</div><div class="card-title">المسلسلات</div>
+            <div class="card-count" id="count-series">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHANNELS -->
+      <div id="section-channels" class="section">
+        <div class="section-header">
+          <h2>📡 القنوات الحية</h2>
+          <div class="section-controls">
+            <input type="text" id="channel-search" class="search-input" placeholder="🔍 بحث...">
+            <select id="channel-category" class="category-select"><option value="all">جميع الفئات</option></select>
+          </div>
+        </div>
+        <div id="channels-grid" class="items-grid"></div>
+      </div>
+
+      <!-- MOVIES -->
+      <div id="section-movies" class="section">
+        <div class="section-header">
+          <h2>🎬 الأفلام</h2>
+          <div class="section-controls">
+            <input type="text" id="movie-search" class="search-input" placeholder="🔍 بحث...">
+            <select id="movie-category" class="category-select"><option value="all">جميع الفئات</option></select>
+          </div>
+        </div>
+        <div id="movies-grid" class="items-grid"></div>
+      </div>
+
+      <!-- SERIES -->
+      <div id="section-series" class="section">
+        <div class="section-header">
+          <h2>📺 المسلسلات</h2>
+          <div class="section-controls">
+            <input type="text" id="series-search" class="search-input" placeholder="🔍 بحث...">
+            <select id="series-category" class="category-select"><option value="all">جميع الفئات</option></select>
+          </div>
+        </div>
+        <div id="series-grid" class="items-grid"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="section-settings" class="section">
+        <div class="section-header"><h2>⚙️ الإعدادات</h2></div>
+        <div class="settings-container">
+          <div class="setting-card">
+            <h3>🌐 اتصال السيرفر</h3>
+            <div class="setting-row">
+              <label>رابط API السكريبت</label>
+              <input type="text" id="setting-api-url" class="setting-input"
+                value="https://script.google.com/macros/s/AKfycbxThygspXN6eB8cDUfY7XavKmhXZfewEUfQqd3vARScZ5y7adterInsbXshNkgPgfiF/exec">
+            </div>
+            <button class="btn-primary" onclick="reconnectServer()">🔄 إعادة الاتصال</button>
+          </div>
+          <div class="setting-card">
+            <h3>📺 جودة المشاهدة</h3>
+            <div class="setting-row">
+              <label>جودة البث الافتراضية</label>
+              <select id="setting-quality" class="setting-select">
+                <option value="auto">تلقائي</option>
+                <option value="1080">1080p</option>
+                <option value="720">720p</option>
+                <option value="480">480p</option>
+              </select>
+            </div>
+          </div>
+          <div class="setting-card">
+            <h3>💾 التخزين المؤقت</h3>
+            <button class="btn-secondary" onclick="clearCache()">🗑️ مسح ذاكرة التخزين</button>
+          </div>
+          <div class="setting-card">
+            <h3>ℹ️ حول التطبيق</h3>
+            <p class="about-text">LATCHI IPTV v1.0.0<br>تطبيق حاسوب للمشاهدة المباشرة<br>© 2026 LATCHI IPTV</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Player ===== -->
+  <div id="player-overlay" class="overlay hidden">
+    <div id="player-container">
+      <div id="player-topbar">
+        <div id="player-info">
+          <span id="player-title">جاري التحميل...</span>
+          <span id="player-type-badge" class="type-badge">مباشر</span>
+        </div>
+        <div class="player-controls-top">
+          <button class="player-btn" id="btn-pip" title="صورة داخل صورة">🖼️</button>
+          <button class="player-btn" id="btn-fullscreen" title="ملء الشاشة">⛶</button>
+          <button class="player-btn player-close" id="btn-close-player" title="إغلاق">✕</button>
+        </div>
+      </div>
+      <div id="player-video-wrapper">
+        <video id="player-video" controls autoplay></video>
+        <div id="player-loading" class="hidden">
+          <div class="spinner"></div>
+          <span>جاري تحميل البث...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Update Dialog ===== -->
+  <div id="update-overlay" class="overlay hidden">
+    <div id="update-dialog">
+      <h3>🔄 تحديث جديد متاح</h3>
+      <p id="update-version-text">جاري التحميل...</p>
+      <div id="update-progress-container" class="hidden">
+        <div id="update-progress-bar"></div>
+        <span id="update-progress-text">0%</span>
+      </div>
+      <div id="update-buttons">
+        <button class="btn-primary" id="btn-update-install">⬇️ تحميل التحديث</button>
+        <button class="btn-secondary" id="btn-update-later">لاحقاً</button>
+      </div>
+      <button class="btn-update-close" id="btn-update-close">✕</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="script.js"></script>
+</body>
+</html>

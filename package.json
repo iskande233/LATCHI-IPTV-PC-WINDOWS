@@ -1,0 +1,44 @@
+{
+  "name": "latchi-iptv-pc",
+  "version": "1.0.0",
+  "description": "LATCHI IPTV - تطبيق الحاسوب للمشاهدة المباشرة",
+  "main": "src/main/main.js",
+  "author": "LATCHI IPTV",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64 --publish never",
+    "build:linux": "electron-builder --linux",
+    "build:mac": "electron-builder --mac",
+    "dist": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.latchi.iptv.pc",
+    "productName": "LATCHI IPTV",
+    "directories": { "output": "dist" },
+    "files": ["src/**/*", "public/**/*"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "public/icon.png",
+      "artifactName": "LATCHI-IPTV-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "LATCHI IPTV"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "iskande233",
+      "repo": "LATCHI-IPTV-PC-WINDOWS"
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  }
+}
