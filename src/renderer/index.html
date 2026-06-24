@@ -2,126 +2,239 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' blob: data:">
 <title>LATCHI IPTV</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
+/* ══════════════════════ RESET ══════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
 :root{
-  --bg:#050A1A;--surface:#0D1530;--card:#111827;
+  --bg:#050A1A;--surf:#0D1530;--card:#111827;
   --border:#1E2A4A;--gold:#FFD700;--blue:#00E5FF;
-  --green:#39FF8B;--red:#FF4757;--text:#E2E8F0;--muted:#64748B;
+  --green:#39FF8B;--red:#FF4757;--muted:#475569;
+  --text:#E2E8F0;--radius:10px;
 }
-body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
-/* ── Titlebar ── */
-#titlebar{height:36px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;-webkit-app-region:drag;flex-shrink:0}
-#tb-logo{display:flex;align-items:center;gap:8px;font-weight:900;font-size:14px;color:var(--gold)}
-#tb-logo span{font-size:18px}
-#tb-controls{display:flex;gap:4px;-webkit-app-region:no-drag}
-.tb-btn{width:28px;height:22px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+/* ══════════════════════ TITLEBAR ══════════════════════ */
+#titlebar{
+  height:36px;background:rgba(5,10,26,0.95);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 12px;-webkit-app-region:drag;flex-shrink:0;
+  backdrop-filter:blur(10px);
+}
+#tb-logo{display:flex;align-items:center;gap:8px;font-weight:900;font-size:13px;color:var(--gold)}
+#tb-status{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.status-dot.online{background:var(--green);box-shadow:0 0 6px var(--green)}
+#tb-controls{display:flex;gap:2px;-webkit-app-region:no-drag}
+.tb-btn{width:28px;height:22px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;font-size:11px;transition:all 0.15s}
 .tb-btn:hover{background:rgba(255,255,255,0.1);color:var(--text)}
 #btn-close:hover{background:#FF4757;color:#fff}
 
-/* ── Layout ── */
-#app-body{flex:1;display:flex;overflow:hidden}
+/* ══════════════════════ BODY ══════════════════════ */
+#app-body{flex:1;display:flex;overflow:hidden;position:relative}
 
-/* ── Sidebar ── */
-#sidebar{width:190px;min-width:190px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:12px 0}
-.nav-btn{display:flex;align-items:center;gap:10px;padding:11px 18px;background:none;border:none;color:var(--muted);cursor:pointer;width:100%;text-align:right;font-size:13px;font-family:inherit;border-right:3px solid transparent;transition:all 0.15s}
-.nav-btn:hover{background:rgba(255,215,0,0.05);color:var(--text)}
-.nav-btn.active{background:rgba(255,215,0,0.08);color:var(--gold);border-right-color:var(--gold)}
-.nav-icon{font-size:17px}
-#sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
-#status-text{font-size:10px;color:var(--muted);word-break:break-all}
+/* ══════════════════════ BACKGROUND ══════════════════════ */
+#wallpaper-bg{
+  position:fixed;inset:0;z-index:0;
+  background:var(--bg);
+  transition:opacity 1s ease;
+}
+#wallpaper-bg img{width:100%;height:100%;object-fit:cover;opacity:0.15}
 
-/* ── Main ── */
-#main{flex:1;overflow-y:auto;overflow-x:hidden}
-.page{display:none;padding:20px}
-.page.active{display:block}
+/* ══════════════════════ LOADING ══════════════════════ */
+#loading-screen{
+  position:fixed;inset:0;z-index:100;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+}
+#loading-screen.hidden{display:none}
+.loading-logo{font-size:48px;font-weight:900;color:var(--gold);text-shadow:0 0 30px rgba(255,215,0,0.5)}
+.loading-sub{font-size:13px;color:var(--muted)}
+.loading-bar{width:200px;height:3px;background:var(--border);border-radius:3px;overflow:hidden}
+.loading-fill{height:100%;background:var(--gold);border-radius:3px;animation:loading 2s ease infinite}
+@keyframes loading{0%{width:0}50%{width:100%}100%{width:0}}
 
-/* ── Home ── */
-.hero{text-align:center;padding:30px 20px 20px;position:relative}
-.hero-title{font-size:32px;font-weight:900;margin-bottom:8px}
-.hero-title span{color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,0.4)}
-.hero-sub{color:var(--muted);font-size:13px;margin-bottom:24px}
-.hero-glow{position:absolute;top:0;left:50%;transform:translateX(-50%);width:300px;height:150px;background:radial-gradient(ellipse,rgba(255,215,0,0.08),transparent 70%);pointer-events:none}
+/* ══════════════════════ ACTIVATION (VIP) ══════════════════════ */
+#activation-screen{
+  position:fixed;inset:0;z-index:99;background:rgba(5,10,26,0.97);
+  display:flex;align-items:center;justify-content:center;
+}
+#activation-screen.hidden{display:none}
+.activation-box{
+  background:var(--surf);border:1px solid var(--border);border-radius:16px;
+  padding:40px;width:380px;text-align:center;
+}
+.activation-box h2{color:var(--gold);font-size:22px;margin-bottom:8px}
+.activation-box p{color:var(--muted);font-size:12px;margin-bottom:24px}
+.act-input{
+  width:100%;padding:12px 16px;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:16px;text-align:center;
+  letter-spacing:4px;font-weight:700;outline:none;margin-bottom:12px;
+  font-family:inherit;
+}
+.act-input:focus{border-color:var(--gold)}
+.act-btn{
+  width:100%;padding:12px;background:var(--gold);color:#000;border:none;
+  border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+}
+.act-btn:hover{background:#FFC000}
+.act-error{color:var(--red);font-size:12px;margin-top:8px;min-height:18px}
+.act-loading{color:var(--muted);font-size:12px;margin-top:8px}
 
-.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
-.stat-num{font-size:28px;font-weight:900;color:var(--gold)}
-.stat-lbl{font-size:11px;color:var(--muted);margin-top:4px}
+/* ══════════════════════ MAIN (3 أعمدة) ══════════════════════ */
+#main-view{flex:1;display:flex;position:relative;z-index:1}
+#main-view.hidden{display:none}
 
-.home-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.home-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s}
-.home-card:hover{border-color:var(--gold);background:rgba(255,215,0,0.05);transform:translateY(-2px)}
-.home-card-icon{font-size:36px;margin-bottom:10px}
-.home-card-title{font-size:14px;font-weight:700;color:var(--text)}
-.home-card-desc{font-size:11px;color:var(--muted);margin-top:4px}
+/* ─── العمود الأيمن: الفئات ─── */
+#col-categories{
+  width:22%;min-width:160px;background:rgba(13,21,48,0.85);
+  border-left:1px solid var(--border);display:flex;flex-direction:column;
+  backdrop-filter:blur(8px);
+}
+.col-header{
+  padding:12px 14px 8px;border-bottom:1px solid var(--border);
+  font-size:11px;font-weight:700;color:var(--gold);flex-shrink:0;
+}
+#cat-alphabet{display:flex;flex-wrap:wrap;gap:3px;padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.alpha-btn{
+  padding:2px 6px;border-radius:4px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);font-size:10px;cursor:pointer;
+  transition:all 0.15s;font-family:inherit;
+}
+.alpha-btn:hover,.alpha-btn.active{background:var(--gold);color:#000;border-color:var(--gold)}
+#cat-list{flex:1;overflow-y:auto;padding:6px}
+.cat-item{
+  padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;
+  margin-bottom:3px;transition:all 0.15s;border:1px solid transparent;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.cat-item:hover{background:rgba(255,215,0,0.06);border-color:rgba(255,215,0,0.15)}
+.cat-item.active{background:rgba(255,215,0,0.12);border-color:var(--gold);color:var(--gold)}
+.cat-count{font-size:9px;color:var(--muted)}
 
-/* ── Channels ── */
-.section-title{font-size:16px;font-weight:700;color:var(--gold);margin-bottom:14px}
+/* ─── العمود الأوسط: القنوات ─── */
+#col-channels{
+  width:33%;background:rgba(13,21,48,0.8);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;backdrop-filter:blur(8px);
+}
+#ch-search{
+  margin:8px;padding:8px 12px;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:12px;outline:none;font-family:inherit;
+  flex-shrink:0;
+}
+#ch-search:focus{border-color:var(--blue)}
+#ch-search::placeholder{color:var(--muted)}
+#ch-alphabet{display:flex;flex-wrap:wrap;gap:3px;padding:4px 8px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
+#ch-list{flex:1;overflow-y:auto;padding:6px}
+.ch-item{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
+  cursor:pointer;border:1px solid transparent;transition:all 0.15s;margin-bottom:3px;
+}
+.ch-item:hover{background:rgba(0,229,255,0.06);border-color:rgba(0,229,255,0.15)}
+.ch-item.playing{background:rgba(57,255,139,0.08);border-color:var(--green)}
+.ch-logo{width:36px;height:36px;border-radius:6px;background:var(--card);object-fit:contain;flex-shrink:0}
+.ch-logo-placeholder{width:36px;height:36px;border-radius:6px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ch-info{flex:1;min-width:0}
+.ch-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-group{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-playing-badge{font-size:9px;color:var(--green);font-weight:700}
 
-#cat-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.cat-btn{padding:5px 12px;background:var(--card);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:11px;cursor:pointer;transition:all 0.15s;font-family:inherit}
-.cat-btn:hover{border-color:var(--gold);color:var(--text)}
-.cat-btn.active{background:rgba(255,215,0,0.12);border-color:var(--gold);color:var(--gold)}
+/* ─── العمود الأيسر: الفيديو ─── */
+#col-player{
+  flex:1;background:rgba(5,10,26,0.7);display:flex;flex-direction:column;
+  backdrop-filter:blur(8px);
+}
+#player-info{padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+#player-ch-name{font-size:14px;font-weight:700;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#player-ch-group{font-size:10px;color:var(--muted);margin-top:2px}
+#video-wrap{flex:1;background:#000;position:relative;cursor:pointer}
+video#player{width:100%;height:100%;display:block}
+#video-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.6);flex-direction:column;gap:12px;
+}
+#video-overlay.hidden{display:none}
+.overlay-icon{font-size:40px}
+.overlay-text{font-size:13px;color:var(--muted)}
+#player-controls{padding:8px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-shrink:0}
+.ctrl-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:11px;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.ctrl-btn:hover{border-color:var(--blue);color:var(--blue)}
+#player-hint{margin-right:auto;font-size:10px;color:var(--muted)}
+#epg-text{font-size:10px;color:var(--blue);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-#search-input{width:100%;padding:9px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;margin-bottom:14px;font-family:inherit}
-#search-input:focus{border-color:var(--gold)}
-#search-input::placeholder{color:var(--muted)}
+/* ══════════════════════ FULLSCREEN ══════════════════════ */
+#col-player.fullscreen-mode{position:fixed;inset:36px 0 0 0;z-index:50;background:#000}
+#col-player.fullscreen-mode #player-info,
+#col-player.fullscreen-mode #player-controls{display:none}
+#col-player.fullscreen-mode video#player{width:100%;height:100%;object-fit:contain}
 
-#channels-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
-.channel-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.15s}
-.channel-card:hover{border-color:var(--blue);background:rgba(0,229,255,0.05);transform:translateY(-1px)}
-.ch-logo-wrap{width:52px;height:52px;margin:0 auto 8px;border-radius:8px;overflow:hidden;background:var(--surface);display:flex;align-items:center;justify-content:center}
-.ch-logo-wrap img{width:100%;height:100%;object-fit:contain}
-.ch-logo-placeholder{font-size:24px;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
-.ch-name{font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ch-group{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.empty-msg{color:var(--muted);text-align:center;padding:40px;font-size:14px}
-
-/* ── Player ── */
-#player-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:1000;display:flex;flex-direction:column}
-#player-overlay.hidden{display:none}
-#player-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(5,10,26,0.8)}
-#player-info .player-title{font-size:15px;font-weight:700;color:var(--gold)}
-#player-info .player-group{font-size:11px;color:var(--muted)}
-#player-controls{display:flex;gap:8px}
-.player-btn{padding:6px 14px;background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:12px;font-family:inherit;transition:all 0.15s}
-.player-btn:hover{background:rgba(255,255,255,0.15)}
-#video-container{flex:1;display:flex;align-items:center;justify-content:center;background:#000}
-#video-player{width:100%;height:100%;max-height:calc(100vh - 60px)}
-#player-overlay.fullscreen-mode #player-topbar{position:absolute;top:0;left:0;right:0;opacity:0;transition:opacity 0.3s;z-index:10}
-#player-overlay.fullscreen-mode:hover #player-topbar{opacity:1}
-
-/* ── Settings ── */
-.settings-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px}
-.settings-section h3{font-size:13px;color:var(--gold);font-weight:700;margin-bottom:12px}
-.setting-label{font-size:11px;color:var(--muted);margin-bottom:6px;display:block}
-.setting-input{width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;margin-bottom:10px;font-family:inherit}
+/* ══════════════════════ SETTINGS PANEL ══════════════════════ */
+#settings-panel{
+  position:fixed;top:36px;left:0;right:0;bottom:0;z-index:60;
+  background:rgba(5,10,26,0.97);display:flex;align-items:center;justify-content:center;
+}
+#settings-panel.hidden{display:none}
+.settings-box{
+  background:var(--surf);border:1px solid var(--border);border-radius:16px;
+  padding:28px;width:480px;max-height:80vh;overflow-y:auto;
+}
+.settings-box h3{color:var(--gold);font-size:16px;font-weight:700;margin-bottom:16px}
+.setting-row{margin-bottom:14px}
+.setting-label{font-size:11px;color:var(--muted);margin-bottom:5px;display:block}
+.setting-input{
+  width:100%;padding:9px 12px;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:12px;outline:none;font-family:inherit;
+}
 .setting-input:focus{border-color:var(--gold)}
-.btn-save{padding:9px 18px;background:var(--gold);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit}
-.btn-save:hover{background:#FFC000}
+.settings-btns{display:flex;gap:8px;margin-top:16px}
+.btn-primary{flex:1;padding:10px;background:var(--gold);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px}
+.btn-secondary{padding:10px 16px;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px}
+.stat-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(57,255,139,0.1);border:1px solid rgba(57,255,139,0.3);border-radius:20px;font-size:11px;color:var(--green);margin-bottom:12px}
 
-#log-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;color:var(--green);max-height:140px;overflow-y:auto;white-space:pre-wrap}
+/* ══════════════════════ EMPTY / LOADING ══════════════════════ */
+.empty-msg{color:var(--muted);text-align:center;padding:30px 10px;font-size:12px}
+.spin{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* ══════════════════════ SCROLLBAR ══════════════════════ */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 </style>
 </head>
 <body>
 
+<!-- Loading -->
+<div id="loading-screen">
+  <div class="loading-logo">📺 LATCHI</div>
+  <div class="loading-sub">جاري الاتصال بالسيرفر...</div>
+  <div class="loading-bar"><div class="loading-fill"></div></div>
+  <div id="loading-msg" style="font-size:11px;color:var(--muted);margin-top:8px"></div>
+</div>
+
+<!-- Activation VIP -->
+<div id="activation-screen" class="hidden">
+  <div class="activation-box">
+    <div style="font-size:36px;margin-bottom:12px">🔐</div>
+    <h2>كود التفعيل VIP</h2>
+    <p>أدخل كود الاشتراك للمتابعة</p>
+    <input class="act-input" id="vip-code-input" placeholder="XXXXXX" maxlength="20" />
+    <button class="act-btn" onclick="submitVipCode()">✅ تفعيل</button>
+    <div class="act-error" id="act-error"></div>
+  </div>
+</div>
+
 <!-- Titlebar -->
 <div id="titlebar">
-  <div id="tb-logo">
-    <span>📺</span>
-    LATCHI <small style="font-weight:400;color:var(--muted);font-size:10px">IPTV PC</small>
+  <div id="tb-logo">📺 LATCHI <span style="font-weight:400;color:var(--muted);font-size:10px">IPTV</span></div>
+  <div id="tb-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">جاري الاتصال...</span>
   </div>
   <div id="tb-controls">
+    <button class="tb-btn" onclick="toggleSettings()" title="إعدادات">⚙</button>
     <button class="tb-btn" id="btn-minimize">─</button>
     <button class="tb-btn" id="btn-maximize">□</button>
     <button class="tb-btn" id="btn-close">✕</button>
@@ -129,114 +242,77 @@ body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:v
 </div>
 
 <div id="app-body">
+  <!-- Wallpaper -->
+  <div id="wallpaper-bg"><img id="wallpaper-img" src="" alt="" onerror="this.style.display='none'" /></div>
 
-  <!-- Sidebar -->
-  <div id="sidebar">
-    <button class="nav-btn active" data-section="home">
-      <span class="nav-icon">🏠</span> الرئيسية
-    </button>
-    <button class="nav-btn" data-section="channels" onclick="renderChannels()">
-      <span class="nav-icon">📡</span> القنوات
-    </button>
-    <button class="nav-btn" data-section="settings" onclick="loadSettingsPage()">
-      <span class="nav-icon">⚙️</span> الإعدادات
-    </button>
+  <!-- Main 3-Column View -->
+  <div id="main-view" class="hidden">
 
-    <div id="sidebar-footer">
-      <div id="status-text">⏳ جاري التهيئة...</div>
-    </div>
-  </div>
-
-  <!-- Main -->
-  <div id="main">
-
-    <!-- Home -->
-    <div class="page active" id="page-home">
-      <div class="hero">
-        <div class="hero-glow"></div>
-        <h1 class="hero-title">مرحباً في <span>LATCHI IPTV</span></h1>
-        <p class="hero-sub">تطبيق البث المباشر على الحاسوب</p>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-num" id="stat-channels">0</div>
-          <div class="stat-lbl">📡 قناة حية</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="stat-cats">0</div>
-          <div class="stat-lbl">📁 فئة</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="stat-rev" style="font-size:16px">—</div>
-          <div class="stat-lbl">🔄 Revision</div>
-        </div>
-      </div>
-
-      <div class="home-cards">
-        <div class="home-card" data-section="channels" onclick="document.querySelector('[data-section=channels]').click()">
-          <div class="home-card-icon">📡</div>
-          <div class="home-card-title">القنوات الحية</div>
-          <div class="home-card-desc">مشاهدة مباشرة</div>
-        </div>
-        <div class="home-card" onclick="syncFromScript()">
-          <div class="home-card-icon">🔄</div>
-          <div class="home-card-title">تحديث القنوات</div>
-          <div class="home-card-desc">مزامنة مع السيرفر</div>
-        </div>
-        <div class="home-card" data-section="settings" onclick="document.querySelector('[data-section=settings]').click();loadSettingsPage()">
-          <div class="home-card-icon">⚙️</div>
-          <div class="home-card-title">الإعدادات</div>
-          <div class="home-card-desc">تخصيص التطبيق</div>
-        </div>
-      </div>
+    <!-- Col 1: Categories (right) -->
+    <div id="col-categories">
+      <div class="col-header">📁 الفئات</div>
+      <div id="cat-alphabet"></div>
+      <div id="cat-list"><div class="empty-msg"><span class="spin">⏳</span></div></div>
     </div>
 
-    <!-- Channels -->
-    <div class="page" id="page-channels">
-      <div class="section-title">📡 القنوات الحية</div>
-      <input id="search-input" placeholder="🔍 ابحث عن قناة..." />
-      <div id="cat-list"></div>
-      <div id="channels-grid">
-        <div class="empty-msg">⏳ جاري تحميل القنوات...</div>
-      </div>
+    <!-- Col 2: Channels (middle) -->
+    <div id="col-channels">
+      <div class="col-header">📺 القنوات</div>
+      <input id="ch-search" placeholder="🔍 ابحث عن قناة..." oninput="filterChannels()" />
+      <div id="ch-alphabet"></div>
+      <div id="ch-list"><div class="empty-msg">اختر فئة</div></div>
     </div>
 
-    <!-- Settings -->
-    <div class="page" id="page-settings">
-      <div class="section-title">⚙️ الإعدادات</div>
-
-      <div class="settings-section">
-        <h3>🔗 رابط السيرفر (M3U)</h3>
-        <label class="setting-label">الرابط الحالي (يُحدَّث تلقائياً من لوحة التحكم)</label>
-        <input class="setting-input" id="setting-url" placeholder="http://..." />
-        <label class="setting-label">آخر Revision: <span id="setting-revision">—</span></label>
-        <button class="btn-save" onclick="saveSettings()">💾 حفظ وتحديث</button>
+    <!-- Col 3: Player (left) -->
+    <div id="col-player">
+      <div id="player-info">
+        <div id="player-ch-name">اختر قناة للمشاهدة</div>
+        <div id="player-ch-group">—</div>
       </div>
-
-      <div class="settings-section">
-        <h3>📜 سجل الأحداث</h3>
-        <div id="log-box">⏳ جاري التهيئة...\n</div>
+      <div id="video-wrap" onclick="handleVideoClick()">
+        <video id="player" autoplay></video>
+        <div id="video-overlay">
+          <div class="overlay-icon">📺</div>
+          <div class="overlay-text">اختر قناة من القائمة</div>
+        </div>
+      </div>
+      <div id="player-controls">
+        <span id="player-hint">OK = ملء الشاشة | Esc = رجوع</span>
+        <div id="epg-text"></div>
+        <button class="ctrl-btn" onclick="toggleFullscreen()">⛶ ملء</button>
+        <button class="ctrl-btn" onclick="stopPlayer()">■ إيقاف</button>
       </div>
     </div>
-
   </div>
 </div>
 
-<!-- Player Overlay -->
-<div id="player-overlay" class="hidden">
-  <div id="player-topbar">
-    <div id="player-info">
-      <div class="player-title" id="player-title">—</div>
-      <div class="player-group" id="player-group">—</div>
+<!-- Settings Panel -->
+<div id="settings-panel" class="hidden">
+  <div class="settings-box">
+    <h3>⚙️ الإعدادات</h3>
+    <div id="settings-stat" class="stat-badge" style="display:none"></div>
+
+    <div class="setting-row">
+      <label class="setting-label">رابط السيرفر الحالي (يُحدَّث تلقائياً)</label>
+      <input class="setting-input" id="set-url" readonly style="color:var(--muted)" />
     </div>
-    <div id="player-controls">
-      <button class="player-btn" onclick="toggleFullscreen()">⛶ ملء الشاشة</button>
-      <button class="player-btn" onclick="closePlayer()">✕ إغلاق</button>
+    <div class="setting-row">
+      <label class="setting-label">Revision الحالي</label>
+      <input class="setting-input" id="set-rev" readonly style="color:var(--muted)" />
     </div>
-  </div>
-  <div id="video-container">
-    <video id="video-player" controls autoplay></video>
+    <div class="setting-row">
+      <label class="setting-label">وضع التطبيق</label>
+      <input class="setting-input" id="set-mode" readonly style="color:var(--muted)" />
+    </div>
+    <div class="setting-row">
+      <label class="setting-label">سجل الأحداث</label>
+      <div id="settings-log" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:10px;color:var(--green);font-family:monospace;max-height:120px;overflow-y:auto;white-space:pre-wrap"></div>
+    </div>
+
+    <div class="settings-btns">
+      <button class="btn-primary" onclick="forceSync()">🔄 تحديث القنوات</button>
+      <button class="btn-secondary" onclick="toggleSettings()">إغلاق</button>
+    </div>
   </div>
 </div>
 
