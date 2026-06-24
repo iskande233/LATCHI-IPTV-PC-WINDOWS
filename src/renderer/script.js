@@ -106,11 +106,67 @@ async function boot() {
 
 function enterApp() {
   hideLoading();
-  document.getElementById('main-view').classList.remove('hidden');
+  showHomeScreen();
   loadChannels();
   startRevisionCheck();
   startPing();
   checkAppUpdate();
+}
+
+function showHomeScreen() {
+  document.getElementById('home-screen').classList.remove('hidden');
+  document.getElementById('main-view').classList.add('hidden');
+  updateHomeStats();
+}
+
+function updateHomeStats() {
+  const modeEl = document.getElementById('card-mode-label');
+  const mode   = localStorage.getItem('latchi_vip_code') ? 'VIP 🔐' : 'مجاني 🔓';
+  if (modeEl) modeEl.textContent = mode;
+}
+
+function updateHomeChannelCount() {
+  const el = document.getElementById('card-live-count');
+  if (el && allChannels.length > 0) {
+    const live = allChannels.filter(c => c.group !== 'VOD').length;
+    el.textContent = `${live} قناة`;
+  }
+}
+
+function goToLive() {
+  document.getElementById('home-screen').classList.add('hidden');
+  document.getElementById('main-view').classList.remove('hidden');
+  if (allChannels.length === 0) loadChannels();
+}
+
+function goToBein() {
+  document.getElementById('home-screen').classList.add('hidden');
+  document.getElementById('main-view').classList.remove('hidden');
+  // نجد فئة beIN تلقائياً
+  const beinCat = allCategories.find(c =>
+    c.toLowerCase().includes('bein') ||
+    c.toLowerCase().includes('sport ar') ||
+    c.toLowerCase().includes('sports')
+  );
+  if (beinCat) {
+    currentCat = beinCat;
+    renderChannels();
+    // نحدد الفئة في القائمة
+    setTimeout(() => {
+      document.querySelectorAll('.cat-item').forEach(el => {
+        el.classList.toggle('active', el.children[0].textContent === beinCat);
+      });
+    }, 100);
+  }
+}
+
+function goToSection(section) {
+  // قريباً — نرسل للـ home في الوقت الحالي
+  if (section === 'theme') {
+    toggleSettings();
+    return;
+  }
+  showHomeScreen();
 }
 
 // ══════════════════════════════════════════════
@@ -183,6 +239,8 @@ async function loadChannels() {
       buildCategories();
       setStatus(`✅ ${allChannels.length} قناة`, true);
       log(`✅ ${allChannels.length} قناة محملة`);
+      updateHomeChannelCount();
+      updateHomeStats();
       return;
     }
   } catch (_) {}

@@ -197,6 +197,23 @@ video#player{width:100%;height:100%;display:block}
 .spin{animation:spin 1s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+/* ══════════════════════ TV CARDS (Home) ══════════════════════ */
+.tv-card{
+  position:relative;border-radius:12px;overflow:hidden;cursor:pointer;
+  aspect-ratio:16/9;border:2px solid transparent;transition:all 0.2s;
+  background:var(--card);
+}
+.tv-card:hover{border-color:var(--gold);transform:scale(1.04);z-index:2;
+  box-shadow:0 0 20px rgba(255,215,0,0.3)}
+.tv-card-img{width:100%;height:100%;object-fit:cover;display:block}
+.tv-card-overlay{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(transparent,rgba(0,0,0,0.85));
+  padding:20px 12px 10px;
+}
+.tv-card-title{font-size:13px;font-weight:700;color:#fff}
+.tv-card-sub{font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px}
+
 /* ══════════════════════ SCROLLBAR ══════════════════════ */
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -234,6 +251,7 @@ video#player{width:100%;height:100%;display:block}
     <span id="status-text">جاري الاتصال...</span>
   </div>
   <div id="tb-controls">
+    <button class="tb-btn" onclick="showHomeScreen()" title="الرئيسية">🏠</button>
     <button class="tb-btn" onclick="toggleSettings()" title="إعدادات">⚙</button>
     <button class="tb-btn" id="btn-minimize">─</button>
     <button class="tb-btn" id="btn-maximize">□</button>
@@ -244,6 +262,94 @@ video#player{width:100%;height:100%;display:block}
 <div id="app-body">
   <!-- Wallpaper -->
   <div id="wallpaper-bg"><img id="wallpaper-img" src="" alt="" onerror="this.style.display='none'" /></div>
+
+  <!-- Home Screen (like TV) -->
+  <div id="home-screen" class="hidden" style="flex:1;position:relative;z-index:1;overflow-y:auto">
+    <div style="padding:24px 32px">
+      <!-- Header -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px" id="home-greeting">مرحباً بك</div>
+        <div style="font-size:22px;font-weight:900;color:var(--gold)">📺 LATCHI IPTV</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px" id="home-stats">جاري التحميل...</div>
+      </div>
+
+      <!-- Cards Grid — نفس التلفاز تماماً -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+
+        <!-- البث المباشر -->
+        <div class="tv-card" onclick="goToLive()" style="grid-column:span 1">
+          <img src="../public/cards/tv_card_live.webp" class="tv-card-img" alt="البث المباشر">
+          <div class="tv-card-overlay">
+            <div class="tv-card-title">📡 البث المباشر</div>
+            <div class="tv-card-sub" id="card-live-count">—</div>
+          </div>
+        </div>
+
+        <!-- الأفلام -->
+        <div class="tv-card" onclick="goToSection('movies')">
+          <img src="../public/cards/tv_card_films.webp" class="tv-card-img" alt="الأفلام">
+          <div class="tv-card-overlay">
+            <div class="tv-card-title">🎬 الأفلام</div>
+            <div class="tv-card-sub">قريباً</div>
+          </div>
+        </div>
+
+        <!-- المسلسلات -->
+        <div class="tv-card" onclick="goToSection('series')">
+          <img src="../public/cards/tv_card_series.webp" class="tv-card-img" alt="المسلسلات">
+          <div class="tv-card-overlay">
+            <div class="tv-card-title">📺 المسلسلات</div>
+            <div class="tv-card-sub">قريباً</div>
+          </div>
+        </div>
+
+        <!-- beIN Sports -->
+        <div class="tv-card" onclick="goToBein()">
+          <img src="../public/cards/tv_card_bein.webp" class="tv-card-img" alt="beIN Sports">
+          <div class="tv-card-overlay">
+            <div class="tv-card-title">🏆 beIN Sports</div>
+            <div class="tv-card-sub">قنوات رياضية</div>
+          </div>
+        </div>
+
+        <!-- المباريات -->
+        <div class="tv-card" onclick="goToSection('matches')">
+          <img src="../public/cards/tv_card_matches.webp" class="tv-card-img" alt="المباريات">
+          <div class="tv-card-overlay">
+            <div class="tv-card-title">⚽ المباريات</div>
+            <div class="tv-card-sub">جدول المباريات</div>
+          </div>
+        </div>
+
+        <!-- الإعدادات -->
+        <div class="tv-card" onclick="toggleSettings()">
+          <img src="../public/cards/tv_card_settings.webp" class="tv-card-img" alt="الإعدادات">
+          <div class="tv-card-overlay">
+            <div class="tv-card-title">⚙️ الإعدادات</div>
+            <div class="tv-card-sub">تخصيص التطبيق</div>
+          </div>
+        </div>
+
+        <!-- الثيم -->
+        <div class="tv-card" onclick="goToSection('theme')">
+          <img src="../public/cards/tv_card_theme.webp" class="tv-card-img" alt="الثيم">
+          <div class="tv-card-overlay">
+            <div class="tv-card-title">🎨 الثيم</div>
+            <div class="tv-card-sub">الخلفيات والمظهر</div>
+          </div>
+        </div>
+
+        <!-- الحسابات -->
+        <div class="tv-card" onclick="goToSection('accounts')">
+          <img src="../public/cards/tv_card_accounts.webp" class="tv-card-img" alt="الحسابات">
+          <div class="tv-card-overlay">
+            <div class="tv-card-title">👤 الحسابات</div>
+            <div class="tv-card-sub" id="card-mode-label">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Main 3-Column View -->
   <div id="main-view" class="hidden">
