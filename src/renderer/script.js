@@ -131,7 +131,7 @@ async function verifyCodeSilent(code) {
     const data = await res.json();
     if (data.valid && data.master_url) { masterUrl = data.master_url; localStorage.setItem('latchi_url', masterUrl); }
     return data.valid === true;
-  } catch (_) { return true; }
+  } catch (_) { return false; }
 }
 
 // ══════════════════════════════════════════════
@@ -582,6 +582,7 @@ function setupKeyboard() {
     // ── F5 = تحديث ─────────────────────────────────────────────
     if (k === 'F5') { loadChannels(); e.preventDefault(); return; }
     if (k === 'F10') { showSettings(); e.preventDefault(); return; }
+    if (k === 'F11') { window.electronAPI?.toggleFullscreen?.(); e.preventDefault(); return; }
 
     // ── Arrows ─────────────────────────────────────────────────
     if (!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(k)) return;
@@ -740,3 +741,172 @@ function getOrCreateDeviceId() {
   return id;
 }
 function esc(s) { return s.replace(/'/g,"\\'"); }
+
+// ══════════════════════════════════════════════
+// v7.2 TV-like Lazy Engine override
+// يحافظ على شكل التلفاز، لكن لا يحمل السيرفر كامل دفعة واحدة.
+// ══════════════════════════════════════════════
+let categoryIds = {};
+let categoryCounts = {};
+let currentType = 'live';
+
+function xtreamCreds(url) {
+  try {
+    const u = new URL((url||'').replace(/&amp;/g,'&'));
+    if (!u.href.toLowerCase().includes('get.php')) return null;
+    const username = u.searchParams.get('username');
+    const password = u.searchParams.get('password');
+    if (!username || !password) return null;
+    return { server: `${u.protocol}//${u.host}`, username, password };
+  } catch(_) { return null; }
+}
+function enc(v){ return encodeURIComponent(v); }
+function typeToCatAction(type){ return type==='movie'?'get_vod_categories':type==='series'?'get_series_categories':'get_live_categories'; }
+function typeToStreamsAction(type){ return type==='movie'?'get_vod_streams':type==='series'?'get_series':'get_live_streams'; }
+function normalizeCatName(n){ return String(n||'').trim(); }
+
+async function loadChannels(type='live') {
+  currentType = type;
+  if (!masterUrl) { setStatus('⚠️ لم يُعيَّن رابط'); return; }
+  const creds = xtreamCreds(masterUrl);
+  if (creds) return loadXtreamCategories(type, creds);
+
+  // fallback M3U فقط إذا ليس Xtream
+  setStatus('⏳ جاري تحميل القنوات...');
+  try {
+    const res  = await fetch(`${SCRIPT_URL}?action=get_categories&_t=${Date.now()}`);
+    const data = await res.json();
+    if ((data.status === 'success' || data.success) && data.channels?.length > 0) {
+      allChannels = data.channels.map(c => ({name:c.name, url:c.url||c.streamUrl, logo:c.logo||c.logoUrl||'', group:c.group||c.category||'أخرى'}));
+      localStorage.setItem('latchi_channels', JSON.stringify(allChannels.slice(0, 500)));
+      categoryIds = {}; categoryCounts = {};
+      buildCategories(); updateHomeStats(); setStatus(`✅ ${allChannels.length} قناة`, true); return;
+    }
+  } catch (_) {}
+  try {
+    const res  = await fetch(masterUrl, { signal: AbortSignal.timeout(25000) });
+    const text = await res.text();
+    if (text.includes('#EXTINF')) {
+      allChannels = parseM3U(text);
+      localStorage.setItem('latchi_channels', JSON.stringify(allChannels.slice(0, 500)));
+      categoryIds = {}; categoryCounts = {};
+      buildCategories(); updateHomeStats(); setStatus(`✅ ${allChannels.length} قناة`, true);
+    }
+  } catch (e) { setStatus('❌ ' + e.message, false); }
+}
+
+async function loadXtreamCategories(type='live', creds=xtreamCreds(masterUrl)) {
+  if (!creds) return loadChannels(type);
+  setStatus('⏳ جاري تحميل الفئات...');
+  currentType = type;
+  try {
+    const url = `${creds.server}/player_api.php?username=${enc(creds.username)}&password=${enc(creds.password)}&action=${typeToCatAction(type)}`;
+    const cats = await fetch(url, {signal: AbortSignal.timeout(18000)}).then(r=>r.json());
+    categoryIds = {}; categoryCounts = {}; allChannels = [];
+    allCategories = (Array.isArray(cats)?cats:[]).map(c => {
+      const name = normalizeCatName(c.category_name || c.name || 'أخرى');
+      const id = String(c.category_id || c.id || '');
+      if (id) categoryIds[name] = id;
+      categoryCounts[name] = Number(c.count || c.category_count || c.child_count || -1);
+      return name;
+    }).filter(Boolean).sort((a,b)=>scoreCategory(a)-scoreCategory(b) || a.localeCompare(b));
+    buildCategories(); updateHomeStats();
+    setStatus(`✅ ${allCategories.length} فئة`, true);
+    const preferred = choosePreferredCategory(type);
+    if (preferred) await selectCategory(preferred);
+    setTimeout(()=>focusFirstCat(),100);
+  } catch(e) { setStatus('❌ فشل تحميل الفئات: '+e.message, false); }
+}
+
+function scoreCategory(cat) {
+  const l=cat.toLowerCase();
+  if (l.includes('world cup')||l.includes('كأس')||l.includes('كاس')) return 0;
+  if (l.includes('bein')||l.includes('بي ان')||l.includes('بي إن')) return 1;
+  if (l.includes('sport')||l.includes('رياض')||l.includes('ssc')||l.includes('alkass')) return 2;
+  if (l.includes('movie')||l.includes('film')||l.includes('vod')||l.includes('أفلام')||l.includes('افلام')) return 3;
+  if (l.includes('series')||l.includes('مسلسل')) return 4;
+  return 10;
+}
+function choosePreferredCategory(type) {
+  if (!allCategories.length) return '';
+  if (type==='live') return allCategories.find(c=>scoreCategory(c)<=2) || allCategories[0];
+  return allCategories[0];
+}
+
+function buildCategories() {
+  if (!allCategories.length) allCategories = [...new Set(allChannels.map(c => c.group))].sort();
+  const letters = [...new Set(allCategories.map(c => c[0]?.toUpperCase()).filter(Boolean))].sort();
+  const catAlpha = document.getElementById('cat-alphabet');
+  catAlpha.innerHTML = `<button class="alpha-btn active" tabindex="0" onclick="filterCatAlpha(this,'')">الكل</button>`;
+  letters.slice(0,20).forEach(l => { catAlpha.innerHTML += `<button class="alpha-btn" tabindex="0" onclick="filterCatAlpha(this,'${l}')">${l}</button>`; });
+  renderCatList(allCategories);
+}
+
+function renderCatList(cats) {
+  const el = document.getElementById('cat-list');
+  if (!cats.length) { el.innerHTML = '<div class="empty-msg">لا توجد فئات</div>'; return; }
+  el.innerHTML = cats.map(cat => {
+    const count = categoryIds[cat] ? (categoryCounts[cat] >= 0 ? categoryCounts[cat] : '…') : allChannels.filter(c => c.group === cat).length;
+    return `<div class="cat-item ${cat===currentCat?'active':''}" tabindex="0" role="button"
+      onclick="selectCategory('${esc(cat)}')"
+      onkeydown="if(event.key==='Enter'||event.key===' '){selectCategory('${esc(cat)}');event.preventDefault()}"
+      onfocus="onCatFocus(this)">
+      <span class="cat-name">${cat}</span><span class="cat-count">${count}</span></div>`;
+  }).join('');
+}
+
+async function selectCategory(cat) {
+  currentCat = cat;
+  renderCatList(allCategories);
+  const creds = xtreamCreds(masterUrl);
+  if (creds && categoryIds[cat]) {
+    setStatus(`⏳ ${cat}...`);
+    const channels = await fetchXtreamCategoryChannels(creds, currentType, categoryIds[cat], cat);
+    allChannels = channels;
+    renderChannelList(channels);
+    setStatus(`✅ ${channels.length} قناة`, true);
+    return;
+  }
+  let channels = allChannels.filter(c => c.group === cat);
+  if (['bein','sport ar','sports'].some(k => cat.toLowerCase().includes(k))) {
+    const pure = channels.filter(c => c.name.toLowerCase().includes('bein'));
+    if (pure.length) channels = pure;
+    channels = channels.sort((a,b)=>(b.name.toLowerCase().includes('max')?1:0)-(a.name.toLowerCase().includes('max')?1:0)||a.name.localeCompare(b.name));
+  }
+  renderChannelList(channels);
+}
+
+async function fetchXtreamCategoryChannels(creds,type,catId,catName) {
+  try {
+    const url = `${creds.server}/player_api.php?username=${enc(creds.username)}&password=${enc(creds.password)}&action=${typeToStreamsAction(type)}&category_id=${enc(catId)}`;
+    const arr = await fetch(url,{signal:AbortSignal.timeout(25000)}).then(r=>r.json());
+    return (Array.isArray(arr)?arr:[]).map(o=>{
+      const id = String(o.stream_id || o.series_id || o.id || '');
+      const name = o.name || o.title || 'Stream';
+      const logo = o.stream_icon || o.cover || o.logo || '';
+      const ext = o.container_extension || 'mp4';
+      let streamUrl = '';
+      if (type==='live') streamUrl = `${creds.server}/live/${creds.username}/${creds.password}/${id}.ts`;
+      else if (type==='movie') streamUrl = `${creds.server}/movie/${creds.username}/${creds.password}/${id}.${ext}`;
+      else streamUrl = `series://${id}`;
+      return {name, logo, url:streamUrl, group:catName};
+    }).filter(c=>c.url && !c.url.endsWith('/.ts'));
+  } catch(e) { return []; }
+}
+
+function goToLive(){ hide('home-screen'); show('main-view'); focusPanel='cats'; loadChannels('live'); }
+function goToBein(){ hide('home-screen'); show('main-view'); focusPanel='cats'; loadXtreamCategories('live').then(()=>{ const b=allCategories.find(c=>['bein','sport','رياض'].some(k=>c.toLowerCase().includes(k))); if(b) selectCategory(b); }); }
+function goToSection(section){
+  if(section==='movies'){ hide('home-screen'); show('main-view'); focusPanel='cats'; loadChannels('movie'); return; }
+  if(section==='series'){ hide('home-screen'); show('main-view'); focusPanel='cats'; loadChannels('series'); return; }
+  if(section==='matches'){ goToLive(); return; }
+  if(section==='theme'){ showSettings(); return; }
+  if(section==='accounts'){ const code=localStorage.getItem('latchi_vip_code')||'—'; alert(`👤 الحساب\n\nالوضع: ${appMode==='vip'?'🔐 VIP':'🔓 مجاني'}\nالكود: ${code}\nRevision: ${lastRevision}\nالجهاز: ${deviceId}`); }
+}
+
+function updateHomeStats(){
+  const el=document.getElementById('stat-channels'); if(el) el.textContent = allChannels.length || '—';
+  const el2=document.getElementById('stat-cats'); if(el2) el2.textContent = allCategories.length || '—';
+  const modeEl=document.getElementById('card-mode-label'); if(modeEl) modeEl.textContent = appMode==='vip'?'🔐 VIP':'🔓 مجاني';
+}
+

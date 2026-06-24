@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimize: () => ipcRenderer.send('minimize'),
   maximize: () => ipcRenderer.send('maximize'),
   close: () => ipcRenderer.send('close'),
+  toggleFullscreen: () => ipcRenderer.send('toggle-fullscreen'),
   isMaximized: () => ipcRenderer.invoke('isMaximized'),
   onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, info) => cb(info)),
   onDownloadProgress: (cb) => ipcRenderer.on('download-progress', (_, p) => cb(p)),
