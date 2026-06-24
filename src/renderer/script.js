@@ -1,308 +1,288 @@
-const CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbxThygspXN6eB8cDUfY7XavKmhXZfewEUfQqd3vARScZ5y7adterInsbXshNkgPgfiF/exec',
-  REFRESH_INTERVAL: 300000
-};
+/**
+ * LATCHI IPTV PC — الواجهة الرئيسية
+ * مربوط مع Google Apps Script نفس التطبيقات الأخرى
+ */
 
-let cache = { viewConfig: null, categories: [], channels: [], movies: { items: [], categories: [] }, series: { items: [], categories: [] } };
-let currentPlayer = null;
+// ══════════════════════════════════════════════
+// الإعدادات
+// ══════════════════════════════════════════════
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoxD7eNi6AVvhw9l_hPzaUkVt1F9U6trUXs28QYuNld_Ip15ZoefcTAdkd4B_DqoGO/exec';
+const CHECK_INTERVAL = 30000; // فحص كل 30 ثانية
 
-// ===== Loading =====
+let masterUrl     = localStorage.getItem('masterUrl') || '';
+let lastRevision  = parseInt(localStorage.getItem('lastRevision') || '0');
+let allChannels   = [];
+let allCategories = [];
+let currentCat    = 'all';
+let searchQuery   = '';
+let hlsPlayer     = null;
+let checkTimer    = null;
+
+// ══════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-  // TitleBar
-  document.getElementById('btn-minimize').onclick = () => window.electronAPI?.minimize();
-  document.getElementById('btn-maximize').onclick = () => window.electronAPI?.maximize();
-  document.getElementById('btn-close').onclick = () => window.electronAPI?.close();
-
-  // Navigation
-  document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => navigateTo(btn.dataset.section));
-  });
-  document.querySelectorAll('.home-card').forEach(card => {
-    card.addEventListener('click', () => navigateTo(card.dataset.section));
-  });
-
-  // Player controls
-  document.getElementById('btn-close-player').onclick = closePlayer;
-  document.getElementById('btn-fullscreen').onclick = toggleFullscreen;
-  document.getElementById('btn-pip').onclick = togglePiP;
-
-  // Update controls
-  document.getElementById('btn-update-later').onclick = () => document.getElementById('update-overlay').classList.add('hidden');
-  document.getElementById('btn-update-close').onclick = () => document.getElementById('update-overlay').classList.add('hidden');
-  document.getElementById('btn-update-install').onclick = () => window.electronAPI?.installUpdate();
-
-  // Search
-  document.getElementById('channel-search').addEventListener('input', filterChannels);
-  document.getElementById('channel-category').addEventListener('change', filterChannels);
-  document.getElementById('movie-search').addEventListener('input', filterMovies);
-  document.getElementById('movie-category').addEventListener('change', filterMovies);
-  document.getElementById('series-search').addEventListener('input', filterSeries);
-  document.getElementById('series-category').addEventListener('change', filterSeries);
-
-  // Start
-  loadAll();
-  setupAutoUpdater();
+  setupNav();
+  setupWindowControls();
+  setupSearch();
+  syncFromScript();
+  startRevisionCheck();
 });
 
-function navigateTo(section) {
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.nav-btn[data-section="${section}"]`)?.classList.add('active');
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.getElementById(`section-${section}`)?.classList.add('active');
+// ══════════════════════════════════════════════
+// Window Controls (Electron)
+// ══════════════════════════════════════════════
+function setupWindowControls() {
+  document.getElementById('btn-minimize')?.addEventListener('click', () => window.electronAPI?.minimize());
+  document.getElementById('btn-maximize')?.addEventListener('click', () => window.electronAPI?.maximize());
+  document.getElementById('btn-close')?.addEventListener('click',    () => window.electronAPI?.close());
 }
 
-async function fetchAPI(action, params = {}) {
-  const url = new URL(CONFIG.API_URL);
-  url.searchParams.set('action', action);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  try {
-    const res = await fetch(url.toString(), { method: 'GET', headers: { 'Accept': 'application/json' } });
-    const text = await res.text();
-    return JSON.parse(text);
-  } catch (err) { return null; }
+// ══════════════════════════════════════════════
+// Navigation
+// ══════════════════════════════════════════════
+function setupNav() {
+  document.querySelectorAll('[data-section]').forEach(el => {
+    el.addEventListener('click', () => {
+      const sec = el.dataset.section;
+      document.querySelectorAll('[data-section]').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + sec)?.classList.add('active');
+      if (sec === 'channels') renderChannels();
+    });
+  });
 }
 
-async function loadAll() {
+// ══════════════════════════════════════════════
+// Google Script — جلب حالة السيرفر والرابط
+// ══════════════════════════════════════════════
+async function syncFromScript() {
+  setStatus('⏳ جاري الاتصال بالسيرفر...');
   try {
-    const [viewConfig, categoriesData, moviesMeta, seriesMeta] = await Promise.all([
-      fetchAPI('get_live_master_state').catch(() => null),
-      fetchAPI('get_categories').catch(() => null),
-      fetchAPI('get_catalog_meta', { type: 'movies' }).catch(() => null),
-      fetchAPI('get_catalog_meta', { type: 'series' }).catch(() => null)
-    ]);
+    const ts  = Date.now();
+    const res = await fetch(`${SCRIPT_URL}?action=get_live_master_state&_t=${ts}`);
+    const data = await res.json();
 
-    if (viewConfig?.success) cache.viewConfig = viewConfig;
-    if (categoriesData?.success) {
-      cache.channels = categoriesData.channels || [];
-      cache.categories = categoriesData.categories || [];
-      updateCategorySelect('channel-category', cache.categories);
-      renderChannels();
-    }
-    if (moviesMeta?.success) {
-      cache.movies.categories = moviesMeta.categories || [];
-      const items = await fetchAPI('get_items_by_category', { type: 'movies', category: 'all' });
-      if (items?.success) { cache.movies.items = items.items || []; renderMovies(); }
-      updateCategorySelect('movie-category', cache.movies.categories);
-    }
-    if (seriesMeta?.success) {
-      cache.series.categories = seriesMeta.categories || [];
-      const items = await fetchAPI('get_items_by_category', { type: 'series', category: 'all' });
-      if (items?.success) { cache.series.items = items.items || []; renderSeries(); }
-      updateCategorySelect('series-category', cache.series.categories);
-    }
+    if (!data.success) { setStatus('❌ فشل الاتصال'); return; }
 
-    updateConnectionStatus(true);
-    updateStats();
+    const newRev = data.server_revision || 0;
+    const newUrl = data.default_playlist_url || data.playlist_url || '';
+
+    // إذا تغيّر الـ revision → حدّث الرابط
+    if (newRev !== lastRevision || newUrl !== masterUrl) {
+      lastRevision = newRev;
+      if (newUrl) masterUrl = newUrl;
+      localStorage.setItem('lastRevision', lastRevision);
+      localStorage.setItem('masterUrl', masterUrl);
+      log(`🔄 Revision: ${newRev} — جاري تحديث القنوات`);
+      await loadChannels();
+    } else {
+      // نفس الـ revision — إذا القنوات فارغة نحملها
+      if (allChannels.length === 0 && masterUrl) await loadChannels();
+      else setStatus(`✅ متصل — ${allChannels.length} قناة`);
+    }
   } catch (e) {
-    updateConnectionStatus(false);
-    console.error('Load error:', e);
+    setStatus('❌ لا يوجد اتصال بالإنترنت');
+    log('❌ ' + e.message);
+    // نحاول نحمل من الكاش
+    const cached = localStorage.getItem('cachedChannels');
+    if (cached && allChannels.length === 0) {
+      allChannels = JSON.parse(cached);
+      buildCategories();
+      renderChannels();
+      setStatus(`📦 من الكاش — ${allChannels.length} قناة`);
+    }
   }
 }
 
-function updateStats() {
-  document.getElementById('count-channels').textContent = cache.channels.length;
-  document.getElementById('count-movies').textContent = cache.movies.items.length;
-  document.getElementById('count-series').textContent = cache.series.items.length;
+// ══════════════════════════════════════════════
+// تحميل القنوات من M3U
+// ══════════════════════════════════════════════
+async function loadChannels() {
+  if (!masterUrl) { setStatus('⚠️ لم يُعيَّن رابط بعد'); return; }
+  setStatus('⏳ جاري تحميل القنوات...');
+  try {
+    const res  = await fetch(masterUrl, { signal: AbortSignal.timeout(30000) });
+    const text = await res.text();
+    if (!text.includes('#EXTINF')) { setStatus('❌ الرابط لا يحتوي على قنوات'); return; }
+
+    allChannels = parseM3U(text);
+    localStorage.setItem('cachedChannels', JSON.stringify(allChannels.slice(0, 500)));
+    buildCategories();
+    renderHome();
+    renderChannels();
+    setStatus(`✅ ${allChannels.length} قناة`);
+    log(`✅ تم تحميل ${allChannels.length} قناة`);
+  } catch (e) {
+    setStatus('❌ فشل تحميل القنوات: ' + e.message);
+    log('❌ ' + e.message);
+  }
 }
 
-function updateConnectionStatus(connected) {
-  const el = document.getElementById('connection-status');
-  el.className = connected ? 'status-connected' : 'status-disconnected';
-  el.innerHTML = connected
-    ? '<span class="status-dot"></span><span>متصل</span>'
-    : '<span class="status-dot"></span><span>غير متصل</span>';
+function parseM3U(text) {
+  const channels = [];
+  const lines    = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line.startsWith('#EXTINF')) continue;
+    const urlLine = (lines[i + 1] || '').trim();
+    if (!urlLine.startsWith('http')) continue;
+    const name  = line.split(',').pop()?.trim() || 'قناة';
+    const logo  = (line.match(/tvg-logo="([^"]+)"/) || [])[1] || '';
+    const group = (line.match(/group-title="([^"]+)"/) || [])[1] || 'أخرى';
+    channels.push({ name, logo, url: urlLine, group });
+  }
+  return channels;
 }
 
-function updateCategorySelect(selectId, categories) {
-  const select = document.getElementById(selectId);
-  if (!select) return;
-  select.innerHTML = '<option value="all">جميع الفئات</option>' +
-    (categories || []).map(c => `<option value="${c}">${c}</option>`).join('');
+function buildCategories() {
+  const cats = [...new Set(allChannels.map(c => c.group).filter(Boolean))].sort();
+  allCategories = cats;
+  const container = document.getElementById('cat-list');
+  if (!container) return;
+  container.innerHTML = `<button class="cat-btn active" data-cat="all" onclick="filterCat(this,'all')">🌐 الكل</button>`;
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn';
+    btn.dataset.cat = cat;
+    btn.textContent = cat;
+    btn.onclick = () => filterCat(btn, cat);
+    container.appendChild(btn);
+  });
 }
 
-// ===== Render =====
-function renderChannels(list) {
-  const items = list || cache.channels;
+// ══════════════════════════════════════════════
+// Render
+// ══════════════════════════════════════════════
+function renderHome() {
+  const el = document.getElementById('stat-channels');
+  if (el) el.textContent = allChannels.length;
+  const el2 = document.getElementById('stat-cats');
+  if (el2) el2.textContent = allCategories.length;
+}
+
+function renderChannels() {
   const grid = document.getElementById('channels-grid');
-  grid.innerHTML = items.map((ch, i) => `
-    <div class="item-card" onclick="playChannel(${i})">
-      <div class="item-thumb">
-        <img src="${ch.logo || 'https://latchi.dz/logo.png'}" onerror="this.style.display='none'" alt="${ch.name}">
-        <div class="play-overlay"><span class="play-icon">▶</span></div>
+  if (!grid) return;
+  let list = allChannels;
+  if (currentCat !== 'all') list = list.filter(c => c.group === currentCat);
+  if (searchQuery) list = list.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  if (list.length === 0) {
+    grid.innerHTML = '<div class="empty-msg">لا توجد قنوات</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map((ch, i) => `
+    <div class="channel-card" onclick="playChannel(${allChannels.indexOf(ch)})">
+      <div class="ch-logo-wrap">
+        ${ch.logo
+          ? `<img src="${ch.logo}" alt="${ch.name}" onerror="this.style.display='none';this.nextSibling.style.display='flex'">`
+          : ''}
+        <div class="ch-logo-placeholder" style="${ch.logo ? 'display:none' : ''}">📺</div>
       </div>
-      <div class="item-info">
-        <div class="item-name">${ch.name}</div>
-        <div class="item-category">${ch.group || ''}</div>
-      </div>
+      <div class="ch-name">${ch.name}</div>
+      <div class="ch-group">${ch.group}</div>
     </div>
   `).join('');
 }
 
-function filterChannels() {
-  const search = document.getElementById('channel-search').value.toLowerCase();
-  const category = document.getElementById('channel-category').value;
-  const filtered = cache.channels.filter(ch =>
-    ch.name.toLowerCase().includes(search) && (category === 'all' || ch.group === category)
-  );
-  renderChannels(filtered);
+function filterCat(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentCat = cat;
+  renderChannels();
 }
 
-function renderMovies(list) {
-  const items = list || cache.movies.items;
-  const grid = document.getElementById('movies-grid');
-  grid.innerHTML = items.map((m, i) => `
-    <div class="item-card" onclick="playMovie(${i})">
-      <div class="item-thumb">
-        <img src="${m.logo || m.thumbnail || ''}" onerror="this.style.display='none'" alt="${m.name}">
-        <div class="play-overlay"><span class="play-icon">▶</span></div>
-      </div>
-      <div class="item-info">
-        <div class="item-name">${m.name}</div>
-        <div class="item-category">${m.category || ''}</div>
-      </div>
-    </div>
-  `).join('');
+function setupSearch() {
+  const inp = document.getElementById('search-input');
+  if (!inp) return;
+  inp.addEventListener('input', () => {
+    searchQuery = inp.value.trim();
+    renderChannels();
+  });
 }
 
-function filterMovies() {
-  const search = document.getElementById('movie-search').value.toLowerCase();
-  const category = document.getElementById('movie-category').value;
-  const filtered = cache.movies.items.filter(m =>
-    m.name.toLowerCase().includes(search) && (category === 'all' || m.category === category)
-  );
-  renderMovies(filtered);
-}
+// ══════════════════════════════════════════════
+// Player HLS
+// ══════════════════════════════════════════════
+function playChannel(index) {
+  const ch = allChannels[index];
+  if (!ch) return;
 
-function renderSeries(list) {
-  const items = list || cache.series.items;
-  const grid = document.getElementById('series-grid');
-  grid.innerHTML = items.map((s, i) => `
-    <div class="item-card" onclick="playSeries(${i})">
-      <div class="item-thumb">
-        <img src="${s.logo || s.thumbnail || ''}" onerror="this.style.display='none'" alt="${s.name}">
-        <div class="play-overlay"><span class="play-icon">▶</span></div>
-      </div>
-      <div class="item-info">
-        <div class="item-name">${s.name}</div>
-        <div class="item-category">${s.category || ''}</div>
-      </div>
-    </div>
-  `).join('');
-}
+  document.getElementById('player-overlay').classList.remove('hidden');
+  document.getElementById('player-title').textContent = ch.name;
+  document.getElementById('player-group').textContent  = ch.group;
 
-function filterSeries() {
-  const search = document.getElementById('series-search').value.toLowerCase();
-  const category = document.getElementById('series-category').value;
-  const filtered = cache.series.items.filter(s =>
-    s.name.toLowerCase().includes(search) && (category === 'all' || s.category === category)
-  );
-  renderSeries(filtered);
-}
+  const video = document.getElementById('video-player');
+  if (hlsPlayer) { hlsPlayer.destroy(); hlsPlayer = null; }
 
-// ===== Player =====
-function openPlayer(title, url, type) {
-  if (!url) return alert('❌ رابط البث غير متاح');
-  const overlay = document.getElementById('player-overlay');
-  const video = document.getElementById('player-video');
-  const loading = document.getElementById('player-loading');
-
-  document.getElementById('player-title').textContent = title;
-  document.getElementById('player-type-badge').textContent = type === 'live' ? 'مباشر' : type === 'movie' ? 'فيلم' : 'مسلسل';
-  overlay.classList.remove('hidden');
-  loading.classList.remove('hidden');
-  if (currentPlayer) { currentPlayer.destroy(); currentPlayer = null; }
-  video.src = '';
-
-  if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('m3u8'))) {
-    const hls = new Hls({ enableWorker: true, lowLatencyMode: true, backbufferLength: 30 });
-    hls.loadSource(url);
-    hls.attachMedia(video);
-    currentPlayer = hls;
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      loading.classList.add('hidden');
-      video.play().catch(() => {});
-    });
-    hls.on(Hls.Events.ERROR, (event, data) => {
-      if (data.fatal) loading.innerHTML = '<span style="color:#FF5577">❌ فشل التحميل</span>';
-    });
+  const url = ch.url;
+  if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+    hlsPlayer = new Hls({ enableWorker: true, lowLatencyMode: true });
+    hlsPlayer.loadSource(url);
+    hlsPlayer.attachMedia(video);
+    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
   } else {
     video.src = url;
-    video.addEventListener('loadedmetadata', () => {
-      loading.classList.add('hidden');
-      video.play().catch(() => {});
-    });
+    video.play().catch(() => {});
   }
 }
 
 function closePlayer() {
-  if (currentPlayer) { currentPlayer.destroy(); currentPlayer = null; }
-  const video = document.getElementById('player-video');
-  video.pause(); video.src = '';
   document.getElementById('player-overlay').classList.add('hidden');
+  const video = document.getElementById('video-player');
+  video.pause();
+  video.src = '';
+  if (hlsPlayer) { hlsPlayer.destroy(); hlsPlayer = null; }
 }
 
 function toggleFullscreen() {
-  const container = document.getElementById('player-video-wrapper');
-  if (document.fullscreenElement) document.exitFullscreen();
-  else container.requestFullscreen();
+  const overlay = document.getElementById('player-overlay');
+  overlay.classList.toggle('fullscreen-mode');
 }
 
-function togglePiP() {
-  const video = document.getElementById('player-video');
-  if (document.pictureInPictureElement) document.exitPictureInPicture();
-  else video.requestPictureInPicture().catch(() => {});
+// ══════════════════════════════════════════════
+// فحص التحديث التلقائي (كل 30 ثانية)
+// ══════════════════════════════════════════════
+function startRevisionCheck() {
+  clearInterval(checkTimer);
+  checkTimer = setInterval(syncFromScript, CHECK_INTERVAL);
 }
 
-function playChannel(index) {
-  const ch = cache.channels[index];
-  if (ch) openPlayer(ch.name, ch.url, 'live');
+// ══════════════════════════════════════════════
+// Settings
+// ══════════════════════════════════════════════
+function saveSettings() {
+  const urlInput = document.getElementById('setting-url');
+  if (urlInput && urlInput.value.trim()) {
+    masterUrl = urlInput.value.trim();
+    localStorage.setItem('masterUrl', masterUrl);
+  }
+  loadChannels();
+  log('💾 تم حفظ الإعدادات');
 }
 
-async function playMovie(index) {
-  const m = cache.movies.items[index];
-  if (!m) return;
-  let url = m.url || '';
-  if (!url && m.id) { const d = await fetchAPI('get_items', { type: 'movie', id: m.id }); url = d?.url || ''; }
-  openPlayer(m.name, url, 'movie');
+function loadSettingsPage() {
+  const urlInput = document.getElementById('setting-url');
+  if (urlInput) urlInput.value = masterUrl;
+  const revEl = document.getElementById('setting-revision');
+  if (revEl) revEl.textContent = lastRevision;
 }
 
-async function playSeries(index) {
-  const s = cache.series.items[index];
-  if (!s) return;
-  let url = s.url || '';
-  if (!url && s.id) { const d = await fetchAPI('get_items', { type: 'series', id: s.id }); url = d?.url || ''; }
-  openPlayer(s.name, url, 'series');
+// ══════════════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════════════
+function setStatus(msg) {
+  const el = document.getElementById('status-text');
+  if (el) el.textContent = msg;
 }
 
-// ===== Settings =====
-function reconnectServer() {
-  updateConnectionStatus(false);
-  CONFIG.API_URL = document.getElementById('setting-api-url').value.trim() || CONFIG.API_URL;
-  loadAll();
+function log(msg) {
+  const el = document.getElementById('log-box');
+  if (!el) return;
+  const time = new Date().toLocaleTimeString('ar');
+  el.innerHTML = `[${time}] ${msg}\n` + el.innerHTML;
+  if (el.innerHTML.length > 3000) el.innerHTML = el.innerHTML.slice(0, 3000);
 }
-
-function clearCache() {
-  cache = { viewConfig: null, categories: [], channels: [], movies: { items: [], categories: [] }, series: { items: [], categories: [] } };
-  loadAll();
-}
-
-// ===== Auto Updater =====
-function setupAutoUpdater() {
-  if (!window.electronAPI) return;
-  window.electronAPI.onUpdateAvailable((info) => {
-    document.getElementById('update-version-text').textContent = `إصدار جديد: ${info.version}`;
-    document.getElementById('update-progress-container').classList.add('hidden');
-    document.getElementById('update-overlay').classList.remove('hidden');
-  });
-  window.electronAPI.onDownloadProgress((progress) => {
-    document.getElementById('update-progress-container').classList.remove('hidden');
-    document.getElementById('update-progress-bar').style.setProperty('--progress', `${progress.percent}%`);
-    document.getElementById('update-progress-text').textContent = `${Math.round(progress.percent)}%`;
-  });
-  window.electronAPI.onUpdateDownloaded(() => {
-    document.getElementById('update-version-text').textContent = '✅ تم التحميل';
-    document.getElementById('btn-update-install').textContent = '🔄 تثبيت';
-  });
-}
-
-console.log('🚀 LATCHI IPTV v1.0.0 - PC Windows');

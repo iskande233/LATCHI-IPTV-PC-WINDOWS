@@ -1,187 +1,245 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src *; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; media-src * blob:; img-src * data: blob:; font-src * data:; connect-src *;">
-  <title>LATCHI IPTV</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' blob: data:">
+<title>LATCHI IPTV</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050A1A;--surface:#0D1530;--card:#111827;
+  --border:#1E2A4A;--gold:#FFD700;--blue:#00E5FF;
+  --green:#39FF8B;--red:#FF4757;--text:#E2E8F0;--muted:#64748B;
+}
+body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+
+/* ── Titlebar ── */
+#titlebar{height:36px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 12px;-webkit-app-region:drag;flex-shrink:0}
+#tb-logo{display:flex;align-items:center;gap:8px;font-weight:900;font-size:14px;color:var(--gold)}
+#tb-logo span{font-size:18px}
+#tb-controls{display:flex;gap:4px;-webkit-app-region:no-drag}
+.tb-btn{width:28px;height:22px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.tb-btn:hover{background:rgba(255,255,255,0.1);color:var(--text)}
+#btn-close:hover{background:#FF4757;color:#fff}
+
+/* ── Layout ── */
+#app-body{flex:1;display:flex;overflow:hidden}
+
+/* ── Sidebar ── */
+#sidebar{width:190px;min-width:190px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:12px 0}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:11px 18px;background:none;border:none;color:var(--muted);cursor:pointer;width:100%;text-align:right;font-size:13px;font-family:inherit;border-right:3px solid transparent;transition:all 0.15s}
+.nav-btn:hover{background:rgba(255,215,0,0.05);color:var(--text)}
+.nav-btn.active{background:rgba(255,215,0,0.08);color:var(--gold);border-right-color:var(--gold)}
+.nav-icon{font-size:17px}
+#sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border)}
+#status-text{font-size:10px;color:var(--muted);word-break:break-all}
+
+/* ── Main ── */
+#main{flex:1;overflow-y:auto;overflow-x:hidden}
+.page{display:none;padding:20px}
+.page.active{display:block}
+
+/* ── Home ── */
+.hero{text-align:center;padding:30px 20px 20px;position:relative}
+.hero-title{font-size:32px;font-weight:900;margin-bottom:8px}
+.hero-title span{color:var(--gold);text-shadow:0 0 20px rgba(255,215,0,0.4)}
+.hero-sub{color:var(--muted);font-size:13px;margin-bottom:24px}
+.hero-glow{position:absolute;top:0;left:50%;transform:translateX(-50%);width:300px;height:150px;background:radial-gradient(ellipse,rgba(255,215,0,0.08),transparent 70%);pointer-events:none}
+
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.stat-num{font-size:28px;font-weight:900;color:var(--gold)}
+.stat-lbl{font-size:11px;color:var(--muted);margin-top:4px}
+
+.home-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.home-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;transition:all 0.2s}
+.home-card:hover{border-color:var(--gold);background:rgba(255,215,0,0.05);transform:translateY(-2px)}
+.home-card-icon{font-size:36px;margin-bottom:10px}
+.home-card-title{font-size:14px;font-weight:700;color:var(--text)}
+.home-card-desc{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* ── Channels ── */
+.section-title{font-size:16px;font-weight:700;color:var(--gold);margin-bottom:14px}
+
+#cat-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.cat-btn{padding:5px 12px;background:var(--card);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:11px;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.cat-btn:hover{border-color:var(--gold);color:var(--text)}
+.cat-btn.active{background:rgba(255,215,0,0.12);border-color:var(--gold);color:var(--gold)}
+
+#search-input{width:100%;padding:9px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;outline:none;margin-bottom:14px;font-family:inherit}
+#search-input:focus{border-color:var(--gold)}
+#search-input::placeholder{color:var(--muted)}
+
+#channels-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.channel-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.15s}
+.channel-card:hover{border-color:var(--blue);background:rgba(0,229,255,0.05);transform:translateY(-1px)}
+.ch-logo-wrap{width:52px;height:52px;margin:0 auto 8px;border-radius:8px;overflow:hidden;background:var(--surface);display:flex;align-items:center;justify-content:center}
+.ch-logo-wrap img{width:100%;height:100%;object-fit:contain}
+.ch-logo-placeholder{font-size:24px;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.ch-name{font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-group{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty-msg{color:var(--muted);text-align:center;padding:40px;font-size:14px}
+
+/* ── Player ── */
+#player-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:1000;display:flex;flex-direction:column}
+#player-overlay.hidden{display:none}
+#player-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(5,10,26,0.8)}
+#player-info .player-title{font-size:15px;font-weight:700;color:var(--gold)}
+#player-info .player-group{font-size:11px;color:var(--muted)}
+#player-controls{display:flex;gap:8px}
+.player-btn{padding:6px 14px;background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;font-size:12px;font-family:inherit;transition:all 0.15s}
+.player-btn:hover{background:rgba(255,255,255,0.15)}
+#video-container{flex:1;display:flex;align-items:center;justify-content:center;background:#000}
+#video-player{width:100%;height:100%;max-height:calc(100vh - 60px)}
+#player-overlay.fullscreen-mode #player-topbar{position:absolute;top:0;left:0;right:0;opacity:0;transition:opacity 0.3s;z-index:10}
+#player-overlay.fullscreen-mode:hover #player-topbar{opacity:1}
+
+/* ── Settings ── */
+.settings-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px}
+.settings-section h3{font-size:13px;color:var(--gold);font-weight:700;margin-bottom:12px}
+.setting-label{font-size:11px;color:var(--muted);margin-bottom:6px;display:block}
+.setting-input{width:100%;padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;margin-bottom:10px;font-family:inherit}
+.setting-input:focus{border-color:var(--gold)}
+.btn-save{padding:9px 18px;background:var(--gold);color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;font-family:inherit}
+.btn-save:hover{background:#FFC000}
+
+#log-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;color:var(--green);max-height:140px;overflow-y:auto;white-space:pre-wrap}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
 </head>
 <body>
-  <div id="app-container">
-    <!-- ===== TitleBar ===== -->
-    <div id="titlebar">
-      <div id="titlebar-drag">
-        <div id="app-logo">
-          <span class="logo-icon">📺</span>
-          <span class="logo-text">LATCHI <small>IPTV</small></span>
-        </div>
-      </div>
-      <div id="titlebar-controls">
-        <button class="tb-btn" id="btn-minimize">─</button>
-        <button class="tb-btn" id="btn-maximize">□</button>
-        <button class="tb-btn tb-close" id="btn-close">✕</button>
-      </div>
-    </div>
 
-    <!-- ===== Sidebar ===== -->
-    <div id="sidebar">
-      <div id="sidebar-menu">
-        <button class="nav-btn active" data-section="home"><span class="nav-icon">🏠</span><span class="nav-label">الرئيسية</span></button>
-        <button class="nav-btn" data-section="channels"><span class="nav-icon">📡</span><span class="nav-label">القنوات</span></button>
-        <button class="nav-btn" data-section="movies"><span class="nav-icon">🎬</span><span class="nav-label">الأفلام</span></button>
-        <button class="nav-btn" data-section="series"><span class="nav-icon">📺</span><span class="nav-label">المسلسلات</span></button>
-        <button class="nav-btn" data-section="settings"><span class="nav-icon">⚙️</span><span class="nav-label">الإعدادات</span></button>
-      </div>
-      <div id="sidebar-footer">
-        <div id="connection-status" class="status-disconnected">
-          <span class="status-dot"></span><span>جاري الاتصال...</span>
-        </div>
-        <div id="app-version">v1.0.0</div>
-      </div>
-    </div>
+<!-- Titlebar -->
+<div id="titlebar">
+  <div id="tb-logo">
+    <span>📺</span>
+    LATCHI <small style="font-weight:400;color:var(--muted);font-size:10px">IPTV PC</small>
+  </div>
+  <div id="tb-controls">
+    <button class="tb-btn" id="btn-minimize">─</button>
+    <button class="tb-btn" id="btn-maximize">□</button>
+    <button class="tb-btn" id="btn-close">✕</button>
+  </div>
+</div>
 
-    <!-- ===== Main Content ===== -->
-    <div id="main-content">
-      <!-- HOME -->
-      <div id="section-home" class="section active">
-        <div class="hero-area">
-          <div class="hero-glow"></div>
-          <h1 class="hero-title">مرحباً بك في <span class="gold-text">LATCHI IPTV</span></h1>
-          <p class="hero-sub">جميع القنوات والأفلام والمسلسلات في مكان واحد</p>
-        </div>
-        <div id="home-cards" class="home-grid">
-          <div class="home-card" data-section="channels">
-            <div class="card-icon">📡</div><div class="card-title">القنوات الحية</div>
-            <div class="card-count" id="count-channels">0</div>
-          </div>
-          <div class="home-card" data-section="movies">
-            <div class="card-icon">🎬</div><div class="card-title">الأفلام</div>
-            <div class="card-count" id="count-movies">0</div>
-          </div>
-          <div class="home-card" data-section="series">
-            <div class="card-icon">📺</div><div class="card-title">المسلسلات</div>
-            <div class="card-count" id="count-series">0</div>
-          </div>
-        </div>
-      </div>
+<div id="app-body">
 
-      <!-- CHANNELS -->
-      <div id="section-channels" class="section">
-        <div class="section-header">
-          <h2>📡 القنوات الحية</h2>
-          <div class="section-controls">
-            <input type="text" id="channel-search" class="search-input" placeholder="🔍 بحث...">
-            <select id="channel-category" class="category-select"><option value="all">جميع الفئات</option></select>
-          </div>
-        </div>
-        <div id="channels-grid" class="items-grid"></div>
-      </div>
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <button class="nav-btn active" data-section="home">
+      <span class="nav-icon">🏠</span> الرئيسية
+    </button>
+    <button class="nav-btn" data-section="channels" onclick="renderChannels()">
+      <span class="nav-icon">📡</span> القنوات
+    </button>
+    <button class="nav-btn" data-section="settings" onclick="loadSettingsPage()">
+      <span class="nav-icon">⚙️</span> الإعدادات
+    </button>
 
-      <!-- MOVIES -->
-      <div id="section-movies" class="section">
-        <div class="section-header">
-          <h2>🎬 الأفلام</h2>
-          <div class="section-controls">
-            <input type="text" id="movie-search" class="search-input" placeholder="🔍 بحث...">
-            <select id="movie-category" class="category-select"><option value="all">جميع الفئات</option></select>
-          </div>
-        </div>
-        <div id="movies-grid" class="items-grid"></div>
-      </div>
-
-      <!-- SERIES -->
-      <div id="section-series" class="section">
-        <div class="section-header">
-          <h2>📺 المسلسلات</h2>
-          <div class="section-controls">
-            <input type="text" id="series-search" class="search-input" placeholder="🔍 بحث...">
-            <select id="series-category" class="category-select"><option value="all">جميع الفئات</option></select>
-          </div>
-        </div>
-        <div id="series-grid" class="items-grid"></div>
-      </div>
-
-      <!-- SETTINGS -->
-      <div id="section-settings" class="section">
-        <div class="section-header"><h2>⚙️ الإعدادات</h2></div>
-        <div class="settings-container">
-          <div class="setting-card">
-            <h3>🌐 اتصال السيرفر</h3>
-            <div class="setting-row">
-              <label>رابط API السكريبت</label>
-              <input type="text" id="setting-api-url" class="setting-input"
-                value="https://script.google.com/macros/s/AKfycbxThygspXN6eB8cDUfY7XavKmhXZfewEUfQqd3vARScZ5y7adterInsbXshNkgPgfiF/exec">
-            </div>
-            <button class="btn-primary" onclick="reconnectServer()">🔄 إعادة الاتصال</button>
-          </div>
-          <div class="setting-card">
-            <h3>📺 جودة المشاهدة</h3>
-            <div class="setting-row">
-              <label>جودة البث الافتراضية</label>
-              <select id="setting-quality" class="setting-select">
-                <option value="auto">تلقائي</option>
-                <option value="1080">1080p</option>
-                <option value="720">720p</option>
-                <option value="480">480p</option>
-              </select>
-            </div>
-          </div>
-          <div class="setting-card">
-            <h3>💾 التخزين المؤقت</h3>
-            <button class="btn-secondary" onclick="clearCache()">🗑️ مسح ذاكرة التخزين</button>
-          </div>
-          <div class="setting-card">
-            <h3>ℹ️ حول التطبيق</h3>
-            <p class="about-text">LATCHI IPTV v1.0.0<br>تطبيق حاسوب للمشاهدة المباشرة<br>© 2026 LATCHI IPTV</p>
-          </div>
-        </div>
-      </div>
+    <div id="sidebar-footer">
+      <div id="status-text">⏳ جاري التهيئة...</div>
     </div>
   </div>
 
-  <!-- ===== Player ===== -->
-  <div id="player-overlay" class="overlay hidden">
-    <div id="player-container">
-      <div id="player-topbar">
-        <div id="player-info">
-          <span id="player-title">جاري التحميل...</span>
-          <span id="player-type-badge" class="type-badge">مباشر</span>
+  <!-- Main -->
+  <div id="main">
+
+    <!-- Home -->
+    <div class="page active" id="page-home">
+      <div class="hero">
+        <div class="hero-glow"></div>
+        <h1 class="hero-title">مرحباً في <span>LATCHI IPTV</span></h1>
+        <p class="hero-sub">تطبيق البث المباشر على الحاسوب</p>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-channels">0</div>
+          <div class="stat-lbl">📡 قناة حية</div>
         </div>
-        <div class="player-controls-top">
-          <button class="player-btn" id="btn-pip" title="صورة داخل صورة">🖼️</button>
-          <button class="player-btn" id="btn-fullscreen" title="ملء الشاشة">⛶</button>
-          <button class="player-btn player-close" id="btn-close-player" title="إغلاق">✕</button>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-cats">0</div>
+          <div class="stat-lbl">📁 فئة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-rev" style="font-size:16px">—</div>
+          <div class="stat-lbl">🔄 Revision</div>
         </div>
       </div>
-      <div id="player-video-wrapper">
-        <video id="player-video" controls autoplay></video>
-        <div id="player-loading" class="hidden">
-          <div class="spinner"></div>
-          <span>جاري تحميل البث...</span>
+
+      <div class="home-cards">
+        <div class="home-card" data-section="channels" onclick="document.querySelector('[data-section=channels]').click()">
+          <div class="home-card-icon">📡</div>
+          <div class="home-card-title">القنوات الحية</div>
+          <div class="home-card-desc">مشاهدة مباشرة</div>
+        </div>
+        <div class="home-card" onclick="syncFromScript()">
+          <div class="home-card-icon">🔄</div>
+          <div class="home-card-title">تحديث القنوات</div>
+          <div class="home-card-desc">مزامنة مع السيرفر</div>
+        </div>
+        <div class="home-card" data-section="settings" onclick="document.querySelector('[data-section=settings]').click();loadSettingsPage()">
+          <div class="home-card-icon">⚙️</div>
+          <div class="home-card-title">الإعدادات</div>
+          <div class="home-card-desc">تخصيص التطبيق</div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ===== Update Dialog ===== -->
-  <div id="update-overlay" class="overlay hidden">
-    <div id="update-dialog">
-      <h3>🔄 تحديث جديد متاح</h3>
-      <p id="update-version-text">جاري التحميل...</p>
-      <div id="update-progress-container" class="hidden">
-        <div id="update-progress-bar"></div>
-        <span id="update-progress-text">0%</span>
+    <!-- Channels -->
+    <div class="page" id="page-channels">
+      <div class="section-title">📡 القنوات الحية</div>
+      <input id="search-input" placeholder="🔍 ابحث عن قناة..." />
+      <div id="cat-list"></div>
+      <div id="channels-grid">
+        <div class="empty-msg">⏳ جاري تحميل القنوات...</div>
       </div>
-      <div id="update-buttons">
-        <button class="btn-primary" id="btn-update-install">⬇️ تحميل التحديث</button>
-        <button class="btn-secondary" id="btn-update-later">لاحقاً</button>
+    </div>
+
+    <!-- Settings -->
+    <div class="page" id="page-settings">
+      <div class="section-title">⚙️ الإعدادات</div>
+
+      <div class="settings-section">
+        <h3>🔗 رابط السيرفر (M3U)</h3>
+        <label class="setting-label">الرابط الحالي (يُحدَّث تلقائياً من لوحة التحكم)</label>
+        <input class="setting-input" id="setting-url" placeholder="http://..." />
+        <label class="setting-label">آخر Revision: <span id="setting-revision">—</span></label>
+        <button class="btn-save" onclick="saveSettings()">💾 حفظ وتحديث</button>
       </div>
-      <button class="btn-update-close" id="btn-update-close">✕</button>
+
+      <div class="settings-section">
+        <h3>📜 سجل الأحداث</h3>
+        <div id="log-box">⏳ جاري التهيئة...\n</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Player Overlay -->
+<div id="player-overlay" class="hidden">
+  <div id="player-topbar">
+    <div id="player-info">
+      <div class="player-title" id="player-title">—</div>
+      <div class="player-group" id="player-group">—</div>
+    </div>
+    <div id="player-controls">
+      <button class="player-btn" onclick="toggleFullscreen()">⛶ ملء الشاشة</button>
+      <button class="player-btn" onclick="closePlayer()">✕ إغلاق</button>
     </div>
   </div>
+  <div id="video-container">
+    <video id="video-player" controls autoplay></video>
+  </div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
