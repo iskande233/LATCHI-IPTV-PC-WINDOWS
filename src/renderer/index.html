@@ -278,8 +278,8 @@ video#player{width:100%;height:100%;display:block}
     <span id="status-text">جاري الاتصال...</span>
   </div>
   <div id="tb-controls">
-    <button class="tb-btn" onclick="showHomeScreen()" title="الرئيسية">🏠</button>
-    <button class="tb-btn" onclick="toggleSettings()" title="إعدادات">⚙</button>
+    <button class="tb-btn" onclick="showHome()" title="🏠 الرئيسية">🏠</button>
+    <button class="tb-btn" onclick="showSettings()" title="⚙️ إعدادات (F10)">⚙</button>
     <button class="tb-btn" id="btn-minimize">─</button>
     <button class="tb-btn" id="btn-maximize">□</button>
     <button class="tb-btn" id="btn-close">✕</button>
@@ -300,80 +300,49 @@ video#player{width:100%;height:100%;display:block}
         <div style="font-size:11px;color:var(--muted);margin-top:4px" id="home-stats">جاري التحميل...</div>
       </div>
 
-      <!-- Cards Grid — نفس التلفاز تماماً -->
+      <!-- Cards Grid -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
 
-        <!-- البث المباشر -->
-        <div class="tv-card" onclick="goToLive()" style="grid-column:span 1">
-          <img src="../public/cards/tv_card_live.webp" class="tv-card-img" alt="البث المباشر">
-          <div class="tv-card-overlay">
-            <div class="tv-card-title">📡 البث المباشر</div>
-            <div class="tv-card-sub" id="card-live-count">—</div>
-          </div>
+        <div class="tv-card" tabindex="0" role="button" onclick="goToLive()" onkeydown="if(event.key==='Enter')goToLive()">
+          <img src="../public/cards/tv_card_live.webp" class="tv-card-img" alt="البث المباشر" onerror="this.style.display='none'">
+          <div class="tv-card-overlay"><div class="tv-card-title">📡 البث المباشر</div><div class="tv-card-sub" id="card-live-count">—</div></div>
         </div>
 
-        <!-- الأفلام -->
-        <div class="tv-card" onclick="goToSection('movies')">
-          <img src="../public/cards/tv_card_films.webp" class="tv-card-img" alt="الأفلام">
-          <div class="tv-card-overlay">
-            <div class="tv-card-title">🎬 الأفلام</div>
-            <div class="tv-card-sub">قريباً</div>
-          </div>
+        <div class="tv-card" tabindex="0" role="button" onclick="goToSection('movies')" onkeydown="if(event.key==='Enter')goToSection('movies')">
+          <img src="../public/cards/tv_card_films.webp" class="tv-card-img" alt="الأفلام" onerror="this.style.display='none'">
+          <div class="tv-card-overlay"><div class="tv-card-title">🎬 الأفلام</div><div class="tv-card-sub">أفلام عربية وأجنبية</div></div>
         </div>
 
-        <!-- المسلسلات -->
-        <div class="tv-card" onclick="goToSection('series')">
-          <img src="../public/cards/tv_card_series.webp" class="tv-card-img" alt="المسلسلات">
-          <div class="tv-card-overlay">
-            <div class="tv-card-title">📺 المسلسلات</div>
-            <div class="tv-card-sub">قريباً</div>
-          </div>
+        <div class="tv-card" tabindex="0" role="button" onclick="goToSection('series')" onkeydown="if(event.key==='Enter')goToSection('series')">
+          <img src="../public/cards/tv_card_series.webp" class="tv-card-img" alt="المسلسلات" onerror="this.style.display='none'">
+          <div class="tv-card-overlay"><div class="tv-card-title">📺 المسلسلات</div><div class="tv-card-sub">مسلسلات متجددة</div></div>
         </div>
 
-        <!-- beIN Sports -->
-        <div class="tv-card" onclick="goToBein()">
-          <img src="../public/cards/tv_card_bein.webp" class="tv-card-img" alt="beIN Sports">
-          <div class="tv-card-overlay">
-            <div class="tv-card-title">🏆 beIN Sports</div>
-            <div class="tv-card-sub">قنوات رياضية</div>
-          </div>
+        <div class="tv-card" tabindex="0" role="button" onclick="goToBein()" onkeydown="if(event.key==='Enter')goToBein()">
+          <img src="../public/cards/tv_card_bein.webp" class="tv-card-img" alt="beIN Sports" onerror="this.style.display='none'">
+          <div class="tv-card-overlay"><div class="tv-card-title">🏆 beIN Sports</div><div class="tv-card-sub">قنوات رياضية</div></div>
         </div>
 
-        <!-- المباريات -->
-        <div class="tv-card" onclick="goToSection('matches')">
-          <img src="../public/cards/tv_card_matches.webp" class="tv-card-img" alt="المباريات">
-          <div class="tv-card-overlay">
-            <div class="tv-card-title">⚽ المباريات</div>
-            <div class="tv-card-sub">جدول المباريات</div>
-          </div>
+        <div class="tv-card" tabindex="0" role="button" onclick="goToSection('matches')" onkeydown="if(event.key==='Enter')goToSection('matches')">
+          <img src="../public/cards/tv_card_matches.webp" class="tv-card-img" alt="المباريات" onerror="this.style.display='none'">
+          <div class="tv-card-overlay"><div class="tv-card-title">⚽ المباريات</div><div class="tv-card-sub">جدول المباريات</div></div>
         </div>
 
-        <!-- الإعدادات -->
-        <div class="tv-card" onclick="toggleSettings()">
-          <img src="../public/cards/tv_card_settings.webp" class="tv-card-img" alt="الإعدادات">
-          <div class="tv-card-overlay">
-            <div class="tv-card-title">⚙️ الإعدادات</div>
-            <div class="tv-card-sub">تخصيص التطبيق</div>
-          </div>
+        <div class="tv-card" tabindex="0" role="button" onclick="showSettings()" onkeydown="if(event.key==='Enter')showSettings()">
+          <img src="../public/cards/tv_card_settings.webp" class="tv-card-img" alt="الإعدادات" onerror="this.style.display='none'">
+          <div class="tv-card-overlay"><div class="tv-card-title">⚙️ الإعدادات</div><div class="tv-card-sub">F10 للإعدادات</div></div>
         </div>
 
-        <!-- الثيم -->
-        <div class="tv-card" onclick="goToSection('theme')">
-          <img src="../public/cards/tv_card_theme.webp" class="tv-card-img" alt="الثيم">
-          <div class="tv-card-overlay">
-            <div class="tv-card-title">🎨 الثيم</div>
-            <div class="tv-card-sub">الخلفيات والمظهر</div>
-          </div>
+        <div class="tv-card" tabindex="0" role="button" onclick="goToSection('theme')" onkeydown="if(event.key==='Enter')goToSection('theme')">
+          <img src="../public/cards/tv_card_theme.webp" class="tv-card-img" alt="الثيم" onerror="this.style.display='none'">
+          <div class="tv-card-overlay"><div class="tv-card-title">🎨 الخلفيات</div><div class="tv-card-sub">تخصيص المظهر</div></div>
         </div>
 
-        <!-- الحسابات -->
-        <div class="tv-card" onclick="goToSection('accounts')">
-          <img src="../public/cards/tv_card_accounts.webp" class="tv-card-img" alt="الحسابات">
-          <div class="tv-card-overlay">
-            <div class="tv-card-title">👤 الحسابات</div>
-            <div class="tv-card-sub" id="card-mode-label">—</div>
-          </div>
+        <div class="tv-card" tabindex="0" role="button" onclick="goToSection('accounts')" onkeydown="if(event.key==='Enter')goToSection('accounts')">
+          <img src="../public/cards/tv_card_accounts.webp" class="tv-card-img" alt="الحسابات" onerror="this.style.display='none'">
+          <div class="tv-card-overlay"><div class="tv-card-title">👤 الحساب</div><div class="tv-card-sub" id="card-mode-label">—</div></div>
         </div>
+
       </div>
     </div>
   </div>
@@ -443,8 +412,8 @@ video#player{width:100%;height:100%;display:block}
     </div>
 
     <div class="settings-btns">
-      <button class="btn-primary" onclick="forceSync()">🔄 تحديث القنوات</button>
-      <button class="btn-secondary" onclick="toggleSettings()">إغلاق</button>
+      <button class="btn-primary" tabindex="0" onclick="forceSync()">🔄 تحديث القنوات</button>
+      <button class="btn-secondary" tabindex="0" onclick="hideSettings()">✕ إغلاق (Esc)</button>
     </div>
   </div>
 </div>
