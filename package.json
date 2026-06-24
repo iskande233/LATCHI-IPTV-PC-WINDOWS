@@ -1,6 +1,6 @@
 {
   "name": "latchi-iptv-pc",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "description": "LATCHI IPTV - تطبيق الحاسوب للمشاهدة المباشرة",
   "main": "src/main/main.js",
   "author": "LATCHI IPTV",
@@ -15,10 +15,22 @@
   "build": {
     "appId": "com.latchi.iptv.pc",
     "productName": "LATCHI IPTV",
-    "directories": { "output": "dist" },
-    "files": ["src/**/*", "public/**/*"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*"
+    ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "public/icon.png",
       "artifactName": "LATCHI-IPTV-Setup-${version}.${ext}"
     },
