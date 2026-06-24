@@ -214,6 +214,33 @@ video#player{width:100%;height:100%;display:block}
 .tv-card-title{font-size:13px;font-weight:700;color:#fff}
 .tv-card-sub{font-size:10px;color:rgba(255,255,255,0.6);margin-top:2px}
 
+/* ══════════════════════ FOCUS (Keyboard Nav) ══════════════════════ */
+.tv-card:focus{
+  outline:none;border-color:var(--gold)!important;
+  transform:scale(1.04);z-index:2;
+  box-shadow:0 0 24px rgba(255,215,0,0.4);
+}
+.cat-item:focus{
+  outline:none;background:rgba(255,215,0,0.1)!important;
+  border-color:var(--gold)!important;color:var(--gold);
+}
+.ch-item:focus{
+  outline:none;background:rgba(0,229,255,0.1)!important;
+  border-color:var(--blue)!important;
+}
+.alpha-btn:focus{
+  outline:none;background:var(--gold);color:#000;border-color:var(--gold);
+}
+#video-wrap:focus{outline:2px solid var(--gold)}
+
+/* ── تلميح الكيبورد ──────────────────────────────────────────────── */
+#keyboard-hint{
+  position:fixed;bottom:8px;left:50%;transform:translateX(-50%);
+  font-size:10px;color:var(--muted);background:rgba(13,21,48,0.8);
+  padding:4px 12px;border-radius:20px;border:1px solid var(--border);
+  pointer-events:none;z-index:10;
+}
+
 /* ══════════════════════ SCROLLBAR ══════════════════════ */
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -423,5 +450,7 @@ video#player{width:100%;height:100%;display:block}
 </div>
 
 <script src="script.js"></script>
-</body>
+
+<!-- تلميح الكيبورد -->
+<div id="keyboard-hint">⌨️ ←→↑↓ تنقل | Enter تحديد | Esc رجوع | F5 تحديث</div>
 </html>

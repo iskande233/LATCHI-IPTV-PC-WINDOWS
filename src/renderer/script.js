@@ -161,12 +161,54 @@ function goToBein() {
 }
 
 function goToSection(section) {
-  // قريباً — نرسل للـ home في الوقت الحالي
-  if (section === 'theme') {
-    toggleSettings();
+  // الأفلام والمسلسلات → نفلتر القنوات من M3U بنفس الطريقة
+  if (section === 'movies' || section === 'series') {
+    const keyword = section === 'movies'
+      ? ['movie','film','films','أفلام','افلام','vod']
+      : ['series','مسلسل','مسلسلات'];
+
+    // نبحث عن فئة مطابقة
+    const matchCat = allCategories.find(c =>
+      keyword.some(k => c.toLowerCase().includes(k))
+    );
+    document.getElementById('home-screen').classList.add('hidden');
+    document.getElementById('main-view').classList.remove('hidden');
+    if (matchCat) {
+      currentCat = matchCat;
+    } else {
+      // عرض كل القنوات مع فلتر نصي
+      currentCat = '';
+      document.getElementById('ch-search').value = section === 'movies' ? 'movie' : 'series';
+    }
+    renderChannels();
     return;
   }
-  showHomeScreen();
+
+  if (section === 'matches') {
+    // نفتح قسم المباريات — نبحث عن فئة رياضة
+    const matchCat = allCategories.find(c =>
+      ['match','sport','كأس','دوري','مباريات'].some(k => c.toLowerCase().includes(k))
+    );
+    document.getElementById('home-screen').classList.add('hidden');
+    document.getElementById('main-view').classList.remove('hidden');
+    if (matchCat) { currentCat = matchCat; renderChannels(); }
+    return;
+  }
+
+  if (section === 'theme') {
+    // تغيير خلفية يدوية
+    const url = prompt('🎨 أدخل رابط صورة الخلفية:', '');
+    if (url) showWallpaper(url);
+    return;
+  }
+
+  if (section === 'accounts') {
+    // عرض معلومات الحساب
+    const code = localStorage.getItem('latchi_vip_code') || 'مجاني';
+    const rev  = lastRevision;
+    alert(`👤 معلومات الحساب\n\nالوضع: ${code === 'مجاني' ? '🔓 مجاني' : '🔐 VIP'}\nالكود: ${code}\nRevision: ${rev}\nالجهاز: ${deviceId}`);
+    return;
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -313,7 +355,9 @@ function renderCategories(cats) {
   el.innerHTML = cats.map(cat => {
     const count = allChannels.filter(c => c.group === cat).length;
     const isAct = cat === currentCat ? 'active' : '';
-    return `<div class="cat-item ${isAct}" onclick="selectCategory('${escHtml(cat)}')">
+    return `<div class="cat-item ${isAct}" tabindex="0" role="button"
+                  onclick="selectCategory('${escHtml(cat)}')"
+                  onkeydown="if(event.key==='Enter'||event.key===' ')selectCategory('${escHtml(cat)}')">
       <span>${cat}</span><span class="cat-count">${count}</span>
     </div>`;
   }).join('');
@@ -373,7 +417,10 @@ function renderChannelList(channels) {
   if (channels.length === 0) { el.innerHTML = '<div class="empty-msg">لا توجد قنوات</div>'; return; }
   el.innerHTML = channels.map((ch, i) => {
     const isPlaying = currentCh && ch.url === currentCh.url;
-    return `<div class="ch-item ${isPlaying?'playing':''}" onclick="playChannel(${allChannels.indexOf(ch)})">
+    const idx = allChannels.indexOf(ch);
+    return `<div class="ch-item ${isPlaying?'playing':''}" tabindex="0" role="button"
+                  onclick="playChannel(${idx})"
+                  onkeydown="if(event.key==='Enter'||event.key===' ')playChannel(${idx})">
       ${ch.logo
         ? `<img class="ch-logo" src="${ch.logo}" alt="" onerror="this.style.display='none'">`
         : `<div class="ch-logo-placeholder">📺</div>`}
@@ -568,16 +615,147 @@ async function forceSync() {
 // ══════════════════════════════════════════════
 // Keyboard
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// ⌨️ نظام التنقل بالكيبورد (مثل ريموت التلفاز)
+// Arrow Keys = تنقل | Enter/Space = تحديد | Esc = رجوع
+// ══════════════════════════════════════════════
 function setupKeyboard() {
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      if (isFullscreen) { isFullscreen = false; document.getElementById('col-player').classList.remove('fullscreen-mode'); }
-      else if (!document.getElementById('settings-panel').classList.contains('hidden')) toggleSettings();
-    }
-    if (e.key === 'Enter' && document.getElementById('vip-code-input') === document.activeElement) {
-      submitVipCode();
-    }
+  // tabindex لكل العناصر القابلة للتركيز
+  document.querySelectorAll('.tv-card').forEach((el, i) => {
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
   });
+
+  document.addEventListener('keydown', e => {
+    const key = e.key;
+
+    // ── Esc ────────────────────────────────────────────────────
+    if (key === 'Escape') {
+      if (isFullscreen) {
+        isFullscreen = false;
+        document.getElementById('col-player').classList.remove('fullscreen-mode');
+        return;
+      }
+      if (!document.getElementById('settings-panel').classList.contains('hidden')) {
+        toggleSettings(); return;
+      }
+      // رجوع للـ Home من شاشة القنوات
+      if (!document.getElementById('main-view').classList.contains('hidden')) {
+        showHomeScreen(); return;
+      }
+    }
+
+    // ── Enter / Space — تفعيل العنصر المحدد ──────────────────
+    if ((key === 'Enter' || key === ' ') && document.activeElement) {
+      const el = document.activeElement;
+
+      // كود VIP
+      if (el.id === 'vip-code-input') { submitVipCode(); return; }
+
+      // بطاقة TV
+      if (el.classList.contains('tv-card') || el.classList.contains('cat-item') ||
+          el.classList.contains('ch-item')) {
+        el.click(); e.preventDefault(); return;
+      }
+
+      // مشغل الفيديو → fullscreen
+      if (el.id === 'video-wrap' || el.id === 'player') {
+        toggleFullscreen(); e.preventDefault(); return;
+      }
+    }
+
+    // ── Arrow Keys — تنقل بين العناصر ────────────────────────
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key)) {
+      e.preventDefault();
+
+      const focused = document.activeElement;
+      const isHome  = !document.getElementById('home-screen').classList.contains('hidden');
+      const isMain  = !document.getElementById('main-view').classList.contains('hidden');
+
+      if (isHome) {
+        // تنقل بين بطاقات الـ Home
+        navigateCards(key);
+      } else if (isMain) {
+        // تحديد العمود النشط وتنقل داخله
+        if (focused.closest('#col-categories') || focused.closest('#cat-list')) {
+          navigateList('#cat-list', '.cat-item', key);
+        } else if (focused.closest('#col-channels') || focused.closest('#ch-list')) {
+          navigateList('#ch-list', '.ch-item', key);
+          // إذا اليسار → انتقل للفيديو
+          if (key === 'ArrowLeft') {
+            document.getElementById('video-wrap')?.focus();
+          }
+          // إذا اليمين → انتقل للفئات
+          if (key === 'ArrowRight') {
+            document.querySelector('#cat-list .cat-item')?.focus();
+          }
+        } else if (focused.closest('#col-player')) {
+          if (key === 'ArrowRight') {
+            document.querySelector('#ch-list .ch-item')?.focus();
+          }
+          if (key === 'Enter' || key === ' ') toggleFullscreen();
+        } else {
+          // تركيز افتراضي على أول فئة
+          document.querySelector('#cat-list .cat-item')?.focus();
+        }
+      }
+    }
+
+    // ── F5 → تحديث القنوات ────────────────────────────────────
+    if (key === 'F5') { forceSync(); }
+  });
+
+  // تفعيل hover style عند التركيز بالكيبورد
+  document.addEventListener('focusin', e => {
+    const el = e.target;
+    if (el.classList.contains('tv-card'))   el.style.borderColor = 'var(--gold)';
+    if (el.classList.contains('cat-item'))  el.style.background  = 'rgba(255,215,0,0.08)';
+    if (el.classList.contains('ch-item'))   el.style.background  = 'rgba(0,229,255,0.08)';
+  });
+  document.addEventListener('focusout', e => {
+    const el = e.target;
+    if (el.classList.contains('tv-card') && !el.matches(':hover')) el.style.borderColor = '';
+    if (el.classList.contains('cat-item') && !el.classList.contains('active')) el.style.background = '';
+    if (el.classList.contains('ch-item') && !el.classList.contains('playing'))  el.style.background = '';
+  });
+}
+
+// تنقل بين بطاقات الشاشة الرئيسية
+function navigateCards(key) {
+  const cards   = Array.from(document.querySelectorAll('.tv-card'));
+  const focused = document.activeElement;
+  const idx     = cards.indexOf(focused);
+  const cols    = 4; // عدد الأعمدة
+
+  let next = -1;
+  if (key === 'ArrowRight') next = idx - 1; // RTL
+  if (key === 'ArrowLeft')  next = idx + 1;
+  if (key === 'ArrowDown')  next = idx + cols;
+  if (key === 'ArrowUp')    next = idx - cols;
+
+  if (next >= 0 && next < cards.length) {
+    cards[next].focus();
+  } else if (idx === -1 && cards.length > 0) {
+    cards[0].focus();
+  }
+}
+
+// تنقل داخل قائمة (فئات أو قنوات)
+function navigateList(listSel, itemSel, key) {
+  const items   = Array.from(document.querySelectorAll(listSel + ' ' + itemSel));
+  const focused = document.activeElement;
+  const idx     = items.indexOf(focused);
+
+  let next = -1;
+  if (key === 'ArrowDown')  next = idx + 1;
+  if (key === 'ArrowUp')    next = idx - 1;
+
+  if (next >= 0 && next < items.length) {
+    items[next].focus();
+    items[next].scrollIntoView({ block: 'nearest' });
+  } else if (idx === -1 && items.length > 0) {
+    items[0].focus();
+  }
 }
 
 // ══════════════════════════════════════════════
