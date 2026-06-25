@@ -5,6 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' blob: data:">
 <title>LATCHI IPTV</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/mpegts.js@latest/dist/mpegts.min.js"></script>
 <style>
 /* ══════════════════════ RESET ══════════════════════ */
 *{margin:0;padding:0;box-sizing:border-box;user-select:none}
@@ -192,6 +193,10 @@ video#player{width:100%;height:100%;display:block}
 .btn-secondary{padding:10px 16px;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px}
 .stat-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(57,255,139,0.1);border:1px solid rgba(57,255,139,0.3);border-radius:20px;font-size:11px;color:var(--green);margin-bottom:12px}
 
+.match-card{padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;background:rgba(17,24,39,.75);cursor:pointer}
+.match-card:focus{outline:2px solid var(--gold);border-color:var(--gold)}
+.match-title{font-size:13px;font-weight:800;color:#fff}.match-meta{font-size:11px;color:var(--muted);margin-top:4px}.match-channel{font-size:11px;color:var(--green);margin-top:5px}
+
 /* ══════════════════════ EMPTY / LOADING ══════════════════════ */
 .empty-msg{color:var(--muted);text-align:center;padding:30px 10px;font-size:12px}
 .spin{animation:spin 1s linear infinite;display:inline-block}
@@ -282,6 +287,7 @@ video#player{width:100%;height:100%;display:block}
     <button class="tb-btn" onclick="showSettings()" title="⚙️ إعدادات (F10)">⚙</button>
     <button class="tb-btn" id="btn-minimize">─</button>
     <button class="tb-btn" id="btn-maximize">□</button>
+    <button class="tb-btn" id="btn-fullscreen" title="Fullscreen (F11)">⛶</button>
     <button class="tb-btn" id="btn-close">✕</button>
   </div>
 </div>
@@ -333,9 +339,9 @@ video#player{width:100%;height:100%;display:block}
           <div class="tv-card-overlay"><div class="tv-card-title">⚙️ الإعدادات</div><div class="tv-card-sub">F10 للإعدادات</div></div>
         </div>
 
-        <div class="tv-card" tabindex="0" role="button" onclick="goToSection('theme')" onkeydown="if(event.key==='Enter')goToSection('theme')">
-          <img src="../public/cards/tv_card_theme.webp" class="tv-card-img" alt="الثيم" onerror="this.style.display='none'">
-          <div class="tv-card-overlay"><div class="tv-card-title">🎨 الخلفيات</div><div class="tv-card-sub">تخصيص المظهر</div></div>
+        <div class="tv-card" tabindex="0" role="button" onclick="goToSection('favorites')" onkeydown="if(event.key==='Enter')goToSection('favorites')">
+          <img src="../public/cards/tv_card_theme.webp" class="tv-card-img" alt="المفضلة" onerror="this.style.display='none'">
+          <div class="tv-card-overlay"><div class="tv-card-title">⭐ المفضلة</div><div class="tv-card-sub">قنوات محفوظة</div></div>
         </div>
 
         <div class="tv-card" tabindex="0" role="button" onclick="goToSection('accounts')" onkeydown="if(event.key==='Enter')goToSection('accounts')">

@@ -46,6 +46,7 @@ ipcMain.on('maximize', () => {
 ipcMain.on('close', () => mainWindow?.close());
 ipcMain.on('toggle-fullscreen', () => { if (mainWindow) mainWindow.setFullScreen(!mainWindow.isFullScreen()); });
 ipcMain.handle('isMaximized', () => mainWindow?.isMaximized() || false);
+ipcMain.on('open-external', (_, url) => { if (url) shell.openExternal(url); });
 
 // IPC - Update
 ipcMain.on('install-update', () => autoUpdater.quitAndInstall());

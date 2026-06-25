@@ -1,6 +1,6 @@
 {
   "name": "latchi-iptv-pc",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "LATCHI IPTV - تطبيق الحاسوب للمشاهدة المباشرة",
   "main": "src/main/main.js",
   "author": "LATCHI IPTV",
